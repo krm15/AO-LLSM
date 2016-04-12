@@ -59,11 +59,11 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageRegionIterator< InputImageType > IteratorType;
   typedef itk::RegionOfInterestImageFilter< InputImageType,
     InputImageType > ROIFilterType;
-  typedef typename InputImageType::RegionType RegionType;
-  typedef typename InputImageType::IndexType IndexType;
-  typedef typename IndexType::IndexValueType IndexValueType;
-  typedef typename InputImageType::SizeType SizeType;
-  typedef typename SizeType::SizeValueType SizeValueType;
+  typedef InputImageType::RegionType RegionType;
+  typedef InputImageType::IndexType IndexType;
+  typedef IndexType::IndexValueType IndexValueType;
+  typedef InputImageType::SizeType SizeType;
+  typedef SizeType::SizeValueType SizeValueType;
 
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName ( argv[1] );
