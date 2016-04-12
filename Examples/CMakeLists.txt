@@ -1,0 +1,4 @@
+ADD_EXECUTABLE(roiExtract ROIExtract.cxx )
+TARGET_LINK_LIBRARIES(roiExtract ${ITK_LIBRARIES} )
+
+
