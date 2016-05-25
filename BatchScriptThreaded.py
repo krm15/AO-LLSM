@@ -74,12 +74,12 @@ threads = []
 
 if __name__ == "__main__":
     if ( len(sys.argv) < 4):
-        print 'BatchScript.py ScriptName start stop -n <inputfile> -m <formatMinus> -z <formatZero> -p <formatPlus>'
+        print 'BatchScriptThreaded.py ScriptName start stop -n <inputfile> -m <formatMinus> -z <formatZero> -p <formatPlus>'
         print 'NOTE: Use %d as regular expression to indicate integer wildcard in strings'
     else:
         start = int(sys.argv[2])
         stop = int(sys.argv[3])
-        numOfThreads = 12
+        numOfThreads = 32
         stepsize = numOfThreads
 
         # Create new threads

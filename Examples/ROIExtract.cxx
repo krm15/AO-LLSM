@@ -53,7 +53,7 @@ int main ( int argc, char* argv[] )
     }
 
   const unsigned int Dimension = 3;
-  typedef itk::Image< unsigned char, Dimension > InputImageType;
+  typedef itk::Image< unsigned short, Dimension > InputImageType;
   typedef itk::ImageFileReader< InputImageType > ReaderType;
   typedef itk::ImageFileWriter< InputImageType > WriterType;
   typedef itk::ImageRegionIterator< InputImageType > IteratorType;
@@ -104,6 +104,7 @@ int main ( int argc, char* argv[] )
   WriterType::Pointer writer = WriterType::New();
   writer->SetInput ( roi->GetOutput() );
   writer->SetFileName ( argv[2] );
+  writer->UseCompressionOn();
 
   try
     {
