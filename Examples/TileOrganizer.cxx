@@ -64,7 +64,7 @@ int main ( int argc, char* argv[] )
   typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
 
   std::string settingsFilename = argv[1];
-  std::ifstream infile ( settingsFilename );
+  std::ifstream infile ( settingsFilename.c_str() );
   if (!infile)
   {
     std::cout << "error in file opening" << std::endl;

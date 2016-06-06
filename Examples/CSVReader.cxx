@@ -60,7 +60,7 @@ int main ( int argc, char* argv[] )
   typedef std::vector< DoubleVectorType > RecordVectorType;
 
   std::string filename = argv[1];
-  std::ifstream infile ( filename );
+  std::ifstream infile ( filename.c_str() );
   if (!infile)
   {
     std::cout << "error in file opening" << std::endl;

@@ -70,7 +70,7 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageFileReader< ImageType > ReaderType;
 
   std::string settingsFilename = argv[1];
-  std::ifstream infile ( settingsFilename );
+  std::ifstream infile ( settingsFilename.c_str() );
   if (!infile)
   {
     std::cout << "error in file opening" << std::endl;
@@ -79,10 +79,10 @@ int main ( int argc, char* argv[] )
 
   std::string value, line;
   StringVectorType m_SettingName;
-  m_SettingName.reserve( 100 );
+  m_SettingName.resize( 100 );
 
   DoubleVectorType m_SettingValue;
-  m_SettingValue.reserve( 100 );
+  m_SettingValue.resize( 100 );
 
   // Read first two lines
   std::getline ( infile, line);
@@ -96,7 +96,7 @@ int main ( int argc, char* argv[] )
   {
     std::getline ( nameStream, value, ',' );
     m_SettingName[i] = value;
-    //std::cout << value << std::endl;
+    //std::cout << value << ' ';
     std::getline ( valueStream, value, ',' );
     m_SettingValue[i] = atof( value.c_str() );
     //std::cout << value << std::endl;
@@ -114,18 +114,9 @@ int main ( int argc, char* argv[] )
     tileSize[i] = m_SettingValue[9+i];
   }
 
-  // Create a vector of tile origins along each axis
-  DoubleVectorType tileCoverStart[3];
-  DoubleVectorType tileCoverEnd[3];
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    tileCoverStart[i].reserve( tileNumber[i] );
-    tileCoverEnd[i].reserve( tileNumber[i] );
-  }
-
   // Read next two lines
   StringVectorType m_TileInfoName;
-  m_TileInfoName.reserve( 100 );
+  m_TileInfoName.resize( 100 );
 
   std::getline ( infile, line);
   std::stringstream tileInfoNameStream( line );
@@ -137,10 +128,10 @@ int main ( int argc, char* argv[] )
     //std::cout << value << std::endl;
   }
 
-  vnlMatrixType m_TileInfoValue (numOfTiles, 12);
+  vnlMatrixType m_TileInfoValue (numOfTiles, 9);
   for( unsigned int i = 0; i < numOfTiles; )
   {
-    //std::cout << "i = " << i;
+    //    std::cout << i << std::endl;
     std::getline ( infile, line);
 
     char dummy = line.c_str()[0];
@@ -154,10 +145,7 @@ int main ( int argc, char* argv[] )
         m_TileInfoValue[i][j] = atof( value.c_str() );
         //std::cout << ' ' << value;
       }
-      for( unsigned int j = 6, k = 0; j < 9; j++, k++ )
-      {
-        m_TileInfoValue[i][j+3] = m_TileInfoValue[i][j] + tileSize[k];
-      }
+
       //std::cout << std::endl;
       i++;
     }
@@ -167,22 +155,72 @@ int main ( int argc, char* argv[] )
     }
   }
 
+  vnlVectorType tileCenter, stitchCenter, newCenter;
+  tileCenter.set_size( Dimension );
+  stitchCenter.set_size( Dimension );
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    stitchCenter[i] = m_TileInfoValue.get_column(i+6).mean();
+    //std::cout << stitchCenter[i] << ' ';
+  }
+  //std::cout << std::endl;
+
+  double theta = 31.8 * vnl_math::pi_over_180;
+  vnlMatrixType rotMatrix( Dimension, Dimension );
+  rotMatrix[0][0] = rotMatrix[0][2] = rotMatrix[1][1] = rotMatrix[2][1] = 0.0;
+  rotMatrix[0][1] = -1;
+  rotMatrix[1][0] = -vcl_cos( theta );
+  rotMatrix[2][2] = vcl_cos( theta );
+  rotMatrix[1][2] = rotMatrix[2][0] = vcl_sin( theta );
+
+  //std::cout << rotMatrix << std::endl;
+
+  vnlMatrixType m_TransformedTileInfoValue (numOfTiles, 3*Dimension);
+  for( unsigned int i = 0; i < numOfTiles; i++ )
+  {
+    for( unsigned int j = 0; j < Dimension; j++ )
+    {
+      tileCenter[j] = m_TileInfoValue[i][j+6];
+      //std::cout << m_TileInfoValue[i][j] << ' ';
+    }
+
+    newCenter = rotMatrix * ( tileCenter - stitchCenter );
+
+    //std::cout << newCenter << std::endl;
+
+    for( unsigned int j = 0; j < Dimension; j++ )
+    {
+      m_TransformedTileInfoValue[i][j] = newCenter[j];
+      m_TransformedTileInfoValue[i][j+Dimension] = newCenter[j] - 0.5*tileSize[j];
+      m_TransformedTileInfoValue[i][j+2*Dimension] = newCenter[j] + 0.5*tileSize[j];
+    }
+  }
+
+  // Create a vector of tile origins along each axis
+  DoubleVectorType tileCoverStart[3];
+  DoubleVectorType tileCoverEnd[3];
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    tileCoverStart[i].resize( tileNumber[i] );
+    tileCoverEnd[i].resize( tileNumber[i] );
+  }
+
   for( unsigned int i = 0; i < numOfTiles; i++ )
   {
     for( unsigned int j = 0; j < Dimension; j++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
-      tileCoverStart[j][temp] = m_TileInfoValue[i][6+j];
-      tileCoverEnd[j][temp] = m_TileInfoValue[i][9+j];
+      tileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
+      tileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
     }
   }
 
-  double minStart[3];
-  double maxEnd[3];
+  vnlVectorType minStart( 3 );
+  vnlVectorType maxEnd( 3 );
   for( unsigned int i = 0; i < Dimension; i++ )
   {
-    minStart[i] = m_TileInfoValue.get_column(6+i).min_value();
-    maxEnd[i] = m_TileInfoValue.get_column(9+i).max_value();
+    minStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
+    maxEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
   }
 
   infile.close();
@@ -241,6 +279,7 @@ int main ( int argc, char* argv[] )
   ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
 */
 
+
   ImageType::SizeType tilePixelDimension;
   tilePixelDimension[0] = 320; tilePixelDimension[1] = 640; tilePixelDimension[2] = 534;
 
@@ -276,11 +315,11 @@ int main ( int argc, char* argv[] )
   stitchedImage->SetSpacing( spacing );
   stitchedImage->SetRegions( stitchRegion );
 
-  std::cout << std::endl;
-  std::cout << stitchOrigin << std::endl;
-  std::cout << spacing << std::endl;
-  std::cout << stitchDimension << std::endl;
-  std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
+  //std::cout << std::endl;
+  //std::cout << stitchOrigin << std::endl;
+  //std::cout << spacing << std::endl;
+  //std::cout << stitchDimension << std::endl;
+  //std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
 
   // Given zStart and zEnd, assemble an ROI
   unsigned int zStart = atoi( argv[5] );
@@ -314,11 +353,11 @@ int main ( int argc, char* argv[] )
   double zEndOrigin = roiOrigin[2] + roiSize[2]*spacing[2];
 
   //std::cout << zBeginOrigin << ' ' << zEndOrigin << std::endl;
-  std::cout << std::endl;
+  //std::cout << std::endl;
   unsigned int zScanStart = 1000000, zScanEnd = 0;
   for( unsigned int i = 0; i < tileNumber[2]; i++ )
   {
-    std::cout << tileCoverStart[2][i] << ' ' << tileCoverEnd[2][i] << std::endl;
+    //std::cout << tileCoverStart[2][i] << ' ' << tileCoverEnd[2][i] << std::endl;
 
     if ( ( zBeginOrigin >= tileCoverStart[2][i] ) &&
          ( zBeginOrigin <= tileCoverEnd[2][i] ) &&
@@ -335,7 +374,7 @@ int main ( int argc, char* argv[] )
     }
   }
 
-  //std::cout << zScanStart << ' ' << zScanEnd << std::endl;
+  std::cout << zScanStart << ' ' << zScanEnd << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   for( unsigned int i = 0; i < tileNumber[0]; i++ )
