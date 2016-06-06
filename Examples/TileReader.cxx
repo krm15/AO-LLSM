@@ -46,6 +46,10 @@
 #include <iomanip>
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
+#include "itkImageRegionIteratorWithIndex.h"
+#include "itkImageSeriesWriter.h"
+#include "itkNumericSeriesFileNames.h"
+
 
 int main ( int argc, char* argv[] )
 {
@@ -64,10 +68,21 @@ int main ( int argc, char* argv[] )
   typedef vnl_vector< double > vnlVectorType;
   typedef itk::Directory DirectoryType;
   typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
+  typedef itk::Vector< double, Dimension > VectorType;
 
   typedef unsigned short PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
   typedef itk::ImageFileReader< ImageType > ReaderType;
+  typedef itk::ImageRegionIteratorWithIndex< ImageType > IteratorType;
+  typedef ImageType::SizeType SizeType;
+  typedef ImageType::IndexType IndexType;
+  typedef ImageType::RegionType RegionType;
+  typedef ImageType::PointType PointType;
+  typedef SizeType::SizeValueType SizeValueType;
+
+  typedef itk::Image< PixelType, 2 > RImageType;
+  typedef itk::NumericSeriesFileNames NameGeneratorType;
+  typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
 
   std::string settingsFilename = argv[1];
   std::ifstream infile ( settingsFilename.c_str() );
@@ -270,18 +285,11 @@ int main ( int argc, char* argv[] )
   }
 
   // Read one image to get tilePixelDimensions and spacing
-  /*
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName ( tileFileNameArray[0][0][0] );
   reader->Update();
-
   ImageType::Pointer currentImage = reader->GetOutput();
   ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
-*/
-
-
-  ImageType::SizeType tilePixelDimension;
-  tilePixelDimension[0] = 320; tilePixelDimension[1] = 640; tilePixelDimension[2] = 534;
 
   ImageType::SpacingType spacing;
   spacing[0] = tileSize[0]/tilePixelDimension[1];
@@ -377,19 +385,101 @@ int main ( int argc, char* argv[] )
   std::cout << zScanStart << ' ' << zScanEnd << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
+  ImageType::PointType currentTileOrigin;
+  ImageType::RegionType currentTileRegion, roiSubRegion;
   for( unsigned int i = 0; i < tileNumber[0]; i++ )
   {
+    currentTileOrigin[0] = tileCoverStart[0][i];
     for( unsigned int j = 0; j < tileNumber[1]; j++ )
     {
+      currentTileOrigin[1] = tileCoverStart[1][j];
       for( unsigned int k = zScanStart; k < zScanEnd; k++ )
       {
+        currentTileOrigin[2] = tileCoverStart[2][k];
+
         filename = tileFileNameArray[i][j][k];
 
-        // Using these images, fill up roiImage
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName( filename.c_str() );
+        reader->Update();
+        ImageType::Pointer currentImage = reader->GetOutput();
 
+        currentImage->SetOrigin( currentTileOrigin );
+        currentTileRegion = currentImage->GetLargestPossibleRegion();
+
+        // Map the two regions roiSubRegion, roiOrigin
+        SizeType sizeA, sizeB, s;
+        sizeA = currentTileRegion.GetSize();
+        sizeB = roiSize;
+
+        IndexType tIndexA, tIndexB;
+        currentImage->TransformPhysicalPointToIndex( roiOrigin, tIndexA );
+        roiImage->TransformPhysicalPointToIndex( currentTileOrigin, tIndexB );
+
+        IndexType sIndexA, sIndexB;
+        for( unsigned int p = 0; p < Dimension; p++ )
+        {
+          if ( currentTileOrigin[p] > roiOrigin[p] )
+          {
+            sIndexA[p] = 0;
+            sIndexB[p] = tIndexB[p];
+            s[p] = sizeA[p];
+            if ( s[p] > static_cast< SizeValueType >( sizeB[p] - sIndexB[p] - 1 ) )
+            {
+              s[p] = sizeB[p] - sIndexB[p];
+            }
+          }
+          else
+          {
+            sIndexB[p] = 0;
+            sIndexA[p] = tIndexA[p];
+            s[p] = sizeB[p];
+            if ( s[p] > static_cast< SizeValueType >( sizeA[p] - sIndexA[p] - 1 ) )
+            {
+              s[p] = sizeA[p] - sIndexA[p];
+            }
+          }
+        }
+
+        currentTileRegion.SetIndex( sIndexA );
+        currentTileRegion.SetSize( s );
+        roiSubRegion.SetIndex( sIndexB );
+        roiSubRegion.SetSize( s );
+
+        // Using these images, fill up roiImage
+        IteratorType rIt( roiImage, roiSubRegion );
+        rIt.GoToBegin();
+
+        IteratorType cIt( currentImage, currentTileRegion );
+        cIt.GoToBegin();
+
+        while( !cIt.IsAtEnd() )
+        {
+          rIt.Set( cIt.Get() );
+          ++cIt;
+          ++rIt;
+        }
       }
     }
   }
+
+  std::stringstream oFilename;
+  oFilename << argv[7] << std::setfill( '0' ) << std::setw( 3 ) << "%d.tif";
+
+  // Set filename format
+  NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
+  nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
+  nameGeneratorOutput->SetStartIndex( zStart );
+  nameGeneratorOutput->SetEndIndex( zEnd );
+  nameGeneratorOutput->SetIncrementIndex( 1 );
+
+  // Write out using Series writer
+  SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
+  series_writer->SetInput( roiImage );
+  series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
+  series_writer->Update();
+
+
 
   return EXIT_SUCCESS;
   }
