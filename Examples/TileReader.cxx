@@ -49,6 +49,7 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
+#include "itkPermuteAxesImageFilter.h"
 
 
 int main ( int argc, char* argv[] )
@@ -74,6 +75,8 @@ int main ( int argc, char* argv[] )
   typedef itk::Image< PixelType, Dimension > ImageType;
   typedef itk::ImageFileReader< ImageType > ReaderType;
   typedef itk::ImageRegionIteratorWithIndex< ImageType > IteratorType;
+  typedef itk::PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
+
   typedef ImageType::SizeType SizeType;
   typedef ImageType::IndexType IndexType;
   typedef ImageType::RegionType RegionType;
@@ -385,6 +388,12 @@ int main ( int argc, char* argv[] )
   std::cout << zScanStart << ' ' << zScanEnd << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
+
+  itk::FixedArray<unsigned int, 3> axesOrder;
+  axesOrder[0] = 1;
+  axesOrder[1] = 0;
+  axesOrder[2] = 2;
+
   ImageType::PointType currentTileOrigin;
   ImageType::RegionType currentTileRegion, roiSubRegion;
   for( unsigned int i = 0; i < tileNumber[0]; i++ )
@@ -402,7 +411,13 @@ int main ( int argc, char* argv[] )
         ReaderType::Pointer reader = ReaderType::New();
         reader->SetFileName( filename.c_str() );
         reader->Update();
-        ImageType::Pointer currentImage = reader->GetOutput();
+
+        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
+        pAFilter->SetInput( reader->GetOutput() );
+        pAFilter->SetOrder( axesOrder );
+        pAFilter->Update();
+
+        ImageType::Pointer currentImage = pAFilter->GetOutput();
 
         currentImage->SetOrigin( currentTileOrigin );
         currentTileRegion = currentImage->GetLargestPossibleRegion();
