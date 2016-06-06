@@ -69,7 +69,6 @@ int main ( int argc, char* argv[] )
   typedef vnl_vector< double > vnlVectorType;
   typedef itk::Directory DirectoryType;
   typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
-  typedef itk::Vector< double, Dimension > VectorType;
 
   typedef unsigned short PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
@@ -290,6 +289,7 @@ int main ( int argc, char* argv[] )
   // Read one image to get tilePixelDimensions and spacing
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName ( tileFileNameArray[0][0][0] );
+  reader->SetGlobalWarningDisplay( 0 );
   reader->Update();
   ImageType::Pointer currentImage = reader->GetOutput();
   ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
@@ -299,12 +299,14 @@ int main ( int argc, char* argv[] )
   spacing[1] = tileSize[1]/tilePixelDimension[0];
   spacing[2] = tileSize[2]/tilePixelDimension[2];
 
-  //std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
-  //std::cout << minStart[0] << ' ' << minStart[1] << ' ' << minStart[2] << std::endl;
-  //std::cout << maxEnd[0] << ' ' << maxEnd[1] << ' ' << maxEnd[2] << std::endl;
-  //std::cout << tileSize[0] << ' ' << tileSize[1] << ' ' << tileSize[2] << std::endl;
-  //std::cout << tilePixelDimension << std::endl;
-  //std::cout << spacing << std::endl;
+  std::cout << "Tile number" << std::endl;
+  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
+  std::cout << " Tile size (um)" << std::endl;
+  std::cout << tileSize[0] << ' ' << tileSize[1] << ' ' << tileSize[2] << std::endl;
+  std::cout << "Tile pixel dimensions" << std::endl;
+  std::cout << tilePixelDimension << std::endl;
+  std::cout << "Tile spacing" << std::endl;
+  std::cout << spacing << std::endl;
 
   // Create the dimensions of the large image
   double                stitchSize[3];
@@ -326,11 +328,13 @@ int main ( int argc, char* argv[] )
   stitchedImage->SetSpacing( spacing );
   stitchedImage->SetRegions( stitchRegion );
 
-  //std::cout << std::endl;
-  //std::cout << stitchOrigin << std::endl;
-  //std::cout << spacing << std::endl;
-  //std::cout << stitchDimension << std::endl;
-  //std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
+  std::cout << std::endl;
+  std::cout << "Stitched image origin" << std::endl;
+  std::cout << stitchOrigin << std::endl;
+  std::cout << "Stitched image dimensions" << std::endl;
+  std::cout << stitchDimension << std::endl;
+  std::cout << "Stitched image size" << std::endl;
+  std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
 
   // Given zStart and zEnd, assemble an ROI
   unsigned int zStart = atoi( argv[5] );
@@ -363,8 +367,6 @@ int main ( int argc, char* argv[] )
   double zBeginOrigin = roiOrigin[2];
   double zEndOrigin = roiOrigin[2] + roiSize[2]*spacing[2];
 
-  //std::cout << zBeginOrigin << ' ' << zEndOrigin << std::endl;
-  //std::cout << std::endl;
   unsigned int zScanStart = 1000000, zScanEnd = 0;
   for( unsigned int i = 0; i < tileNumber[2]; i++ )
   {
@@ -385,6 +387,8 @@ int main ( int argc, char* argv[] )
     }
   }
 
+  std::cout << std::endl;
+  std::cout << "Tile z steps under consideration" << std::endl;
   std::cout << zScanStart << ' ' << zScanEnd << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
@@ -410,6 +414,7 @@ int main ( int argc, char* argv[] )
 
         ReaderType::Pointer reader = ReaderType::New();
         reader->SetFileName( filename.c_str() );
+        reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
 
         PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
