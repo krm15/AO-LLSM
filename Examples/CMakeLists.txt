@@ -7,4 +7,12 @@ TARGET_LINK_LIBRARIES(maxProj ${ITK_LIBRARIES})
 ADD_EXECUTABLE(deconvolve RichardsonLucyDeconvolution.cxx)
 TARGET_LINK_LIBRARIES(deconvolve ${ITK_LIBRARIES})
 
+ADD_EXECUTABLE(csvReader CSVReader.cxx)
+TARGET_LINK_LIBRARIES(csvReader ${ITK_LIBRARIES})
+
+ADD_EXECUTABLE(tileOrganizer TileOrganizer.cxx)
+TARGET_LINK_LIBRARIES(tileOrganizer ${ITK_LIBRARIES})
+
+ADD_EXECUTABLE(tileReader TileReader.cxx)
+TARGET_LINK_LIBRARIES(tileReader ${ITK_LIBRARIES})
 
