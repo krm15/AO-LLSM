@@ -48,13 +48,14 @@
 #include "itkImageFileReader.h"
 
 int main ( int argc, char* argv[] )
-  {
+{
   if ( argc < 6 )
-    {
+  {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " inputSettingsFile inputImageDir channelNumber timePoint output" << std::endl;
+    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir iChannelNumber ";
+    std::cerr << "iTimePoint iZStart iZEnd oOutputImageDir" << std::endl;
     return EXIT_FAILURE;
-    }
+  }
 
   const unsigned int Dimension = 3;
   typedef std::vector< std::string > StringVectorType;
@@ -93,28 +94,36 @@ int main ( int argc, char* argv[] )
   // First two lines is 29 fields of data
   for( unsigned int i = 0; i < 29; i++ )
   {
-       std::getline ( nameStream, value, ',' );
-       m_SettingName[i] = value;
-       //std::cout << value << std::endl;
-       std::getline ( valueStream, value, ',' );
-       m_SettingValue[i] = atof( value.c_str() );
-       //std::cout << value << std::endl;
+    std::getline ( nameStream, value, ',' );
+    m_SettingName[i] = value;
+    //std::cout << value << std::endl;
+    std::getline ( valueStream, value, ',' );
+    m_SettingValue[i] = atof( value.c_str() );
+    //std::cout << value << std::endl;
   }
 
   // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = m_SettingValue[0] * m_SettingValue[1] * m_SettingValue[2];
-
+  unsigned int numOfTiles = 1;
   double tileNumber[3];
-  tileNumber[0] = m_SettingValue[0];
-  tileNumber[1] = m_SettingValue[1];
-  tileNumber[2] = m_SettingValue[2];
-
   double tileSize[3];
-  tileSize[0] = m_SettingValue[9];
-  tileSize[1] = m_SettingValue[10];
-  tileSize[2] = m_SettingValue[11];
 
-  // Read second two lines
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    numOfTiles *= m_SettingValue[i];
+    tileNumber[i] = m_SettingValue[i];
+    tileSize[i] = m_SettingValue[9+i];
+  }
+
+  // Create a vector of tile origins along each axis
+  DoubleVectorType tileCoverStart[3];
+  DoubleVectorType tileCoverEnd[3];
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    tileCoverStart[i].reserve( tileNumber[i] );
+    tileCoverEnd[i].reserve( tileNumber[i] );
+  }
+
+  // Read next two lines
   StringVectorType m_TileInfoName;
   m_TileInfoName.reserve( 100 );
 
@@ -158,18 +167,25 @@ int main ( int argc, char* argv[] )
     }
   }
 
-  double minStart[3];
-  minStart[0] = m_TileInfoValue.get_column(6).min_value();
-  minStart[1] = m_TileInfoValue.get_column(7).min_value();
-  minStart[2] = m_TileInfoValue.get_column(8).min_value();
+  for( unsigned int i = 0; i < numOfTiles; i++ )
+  {
+    for( unsigned int j = 0; j < Dimension; j++ )
+    {
+      unsigned int temp =  m_TileInfoValue[i][j];
+      tileCoverStart[j][temp] = m_TileInfoValue[i][6+j];
+      tileCoverEnd[j][temp] = m_TileInfoValue[i][9+j];
+    }
+  }
 
+  double minStart[3];
   double maxEnd[3];
-  maxEnd[0] = m_TileInfoValue.get_column(9).max_value();
-  maxEnd[1] = m_TileInfoValue.get_column(10).max_value();
-  maxEnd[2] = m_TileInfoValue.get_column(11).max_value();
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    minStart[i] = m_TileInfoValue.get_column(6+i).min_value();
+    maxEnd[i] = m_TileInfoValue.get_column(9+i).max_value();
+  }
 
   infile.close();
-
 
   // Read all the files in the input directory of type ch and at timePoint
   std::string filename;
@@ -216,30 +232,125 @@ int main ( int argc, char* argv[] )
   }
 
   // Read one image to get tilePixelDimensions and spacing
+  /*
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName ( tileFileNameArray[0][0][0] );
   reader->Update();
 
   ImageType::Pointer currentImage = reader->GetOutput();
   ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
+*/
+
+  ImageType::SizeType tilePixelDimension;
+  tilePixelDimension[0] = 320; tilePixelDimension[1] = 640; tilePixelDimension[2] = 534;
 
   ImageType::SpacingType spacing;
   spacing[0] = tileSize[0]/tilePixelDimension[1];
   spacing[1] = tileSize[1]/tilePixelDimension[0];
   spacing[2] = tileSize[2]/tilePixelDimension[2];
 
-  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
-  std::cout << minStart[0] << ' ' << minStart[1] << ' ' << minStart[2] << std::endl;
-  std::cout << maxEnd[0] << ' ' << maxEnd[1] << ' ' << maxEnd[2] << std::endl;
-
-  std::cout << tileSize[0] << ' ' << tileSize[1] << ' ' << tileSize[2] << std::endl;
-  std::cout << tilePixelDimension << std::endl;
-  std::cout << spacing << std::endl;
-
-
+  //std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
+  //std::cout << minStart[0] << ' ' << minStart[1] << ' ' << minStart[2] << std::endl;
+  //std::cout << maxEnd[0] << ' ' << maxEnd[1] << ' ' << maxEnd[2] << std::endl;
+  //std::cout << tileSize[0] << ' ' << tileSize[1] << ' ' << tileSize[2] << std::endl;
+  //std::cout << tilePixelDimension << std::endl;
+  //std::cout << spacing << std::endl;
 
   // Create the dimensions of the large image
+  double                stitchSize[3];
+  ImageType::PointType  stitchOrigin;
+  ImageType::SizeType   stitchDimension;
+  ImageType::IndexType  stitchIndex;
+  ImageType::RegionType stitchRegion;
 
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    stitchIndex[i]     = 0;
+    stitchSize[i]      = maxEnd[i] - minStart[i];
+    stitchOrigin[i]    = minStart[i];
+    stitchDimension[i] = stitchSize[i]/spacing[i];
+  }
+
+  ImageType::Pointer stitchedImage = ImageType::New();
+  stitchedImage->SetOrigin( stitchOrigin );
+  stitchedImage->SetSpacing( spacing );
+  stitchedImage->SetRegions( stitchRegion );
+
+  std::cout << std::endl;
+  std::cout << stitchOrigin << std::endl;
+  std::cout << spacing << std::endl;
+  std::cout << stitchDimension << std::endl;
+  std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
+
+  // Given zStart and zEnd, assemble an ROI
+  unsigned int zStart = atoi( argv[5] );
+  unsigned int zEnd = atoi( argv[6] );
+
+  ImageType::RegionType roi;
+
+  ImageType::IndexType  roiIndex;
+  roiIndex = stitchIndex;
+  roiIndex[2] = zStart;
+
+  ImageType::SizeType   roiSize;
+  roiSize = stitchDimension;
+  roiSize[2] = zEnd - zStart + 1;
+
+  roi.SetIndex( roiIndex );
+  roi.SetSize( roiSize );
+
+  ImageType::PointType  roiOrigin;
+  stitchedImage->TransformIndexToPhysicalPoint( roiIndex, roiOrigin );
+
+  ImageType::Pointer roiImage = ImageType::New();
+  roiImage->SetOrigin( roiOrigin );
+  roiImage->SetSpacing( spacing );
+  roiImage->SetRegions( roi );
+  roiImage->Allocate();
+  roiImage->FillBuffer( 0.0 );
+
+  // Identify all the tiles that belong to this roi
+  double zBeginOrigin = roiOrigin[2];
+  double zEndOrigin = roiOrigin[2] + roiSize[2]*spacing[2];
+
+  //std::cout << zBeginOrigin << ' ' << zEndOrigin << std::endl;
+  std::cout << std::endl;
+  unsigned int zScanStart = 1000000, zScanEnd = 0;
+  for( unsigned int i = 0; i < tileNumber[2]; i++ )
+  {
+    std::cout << tileCoverStart[2][i] << ' ' << tileCoverEnd[2][i] << std::endl;
+
+    if ( ( zBeginOrigin >= tileCoverStart[2][i] ) &&
+         ( zBeginOrigin <= tileCoverEnd[2][i] ) &&
+         ( zScanStart > i ) )
+    {
+      zScanStart = i;
+    }
+
+    if ( ( zEndOrigin >= tileCoverStart[2][i] ) &&
+         ( zEndOrigin <= tileCoverEnd[2][i] ) &&
+         ( zScanEnd < i ) )
+    {
+      zScanEnd = i;
+    }
+  }
+
+  //std::cout << zScanStart << ' ' << zScanEnd << std::endl;
+
+  // Start a loop that will read all the tiles from zScanStart to zScanEnd
+  for( unsigned int i = 0; i < tileNumber[0]; i++ )
+  {
+    for( unsigned int j = 0; j < tileNumber[1]; j++ )
+    {
+      for( unsigned int k = zScanStart; k < zScanEnd; k++ )
+      {
+        filename = tileFileNameArray[i][j][k];
+
+        // Using these images, fill up roiImage
+
+      }
+    }
+  }
 
   return EXIT_SUCCESS;
   }
