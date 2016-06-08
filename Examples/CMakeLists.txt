@@ -1,3 +1,8 @@
+INCLUDE_DIRECTORIES( BEFORE
+  ${AO-LLSM_SOURCE_DIR}/ImageStitching
+  ${AO-LLSM_BINARY_DIR}/ImageStitching
+)
+
 ADD_EXECUTABLE(roiExtract ROIExtract.cxx )
 TARGET_LINK_LIBRARIES(roiExtract ${ITK_LIBRARIES} )
 

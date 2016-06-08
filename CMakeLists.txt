@@ -33,6 +33,7 @@ SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY
 )
 
 SET( DIRECTORIES
+  ImageStitching
   Examples
 )
 

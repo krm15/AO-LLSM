@@ -49,6 +49,7 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
+#include "itkSettingsInfoExtractionFilter.h"
 
 
 int main ( int argc, char* argv[] )
@@ -68,6 +69,8 @@ int main ( int argc, char* argv[] )
   typedef vnl_vector< double > vnlVectorType;
   typedef itk::Directory DirectoryType;
   typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
+
+  typedef itk::SettingsInfoExtractionFilter< double > SettingsFilterType;
 
   typedef unsigned short PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
@@ -92,211 +95,22 @@ int main ( int argc, char* argv[] )
     return 0;
   }
 
-  std::string value, line;
-  StringVectorType m_SettingName;
-  m_SettingName.resize( 100 );
-
-  DoubleVectorType m_SettingValue;
-  m_SettingValue.resize( 100 );
-
-  // Read first two lines
-  std::getline ( infile, line);
-  std::stringstream nameStream(line);
-
-  std::getline ( infile, line);
-  std::stringstream valueStream( line );
-
-  // First two lines is 29 fields of data
-  for( unsigned int i = 0; i < 29; i++ )
-  {
-    std::getline ( nameStream, value, ',' );
-    m_SettingName[i] = value;
-    //std::cout << value << ' ';
-    std::getline ( valueStream, value, ',' );
-    m_SettingValue[i] = atof( value.c_str() );
-    //std::cout << value << std::endl;
-  }
-
-  // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = 1;
-  double tileNumber[3];
-  double tileSize[3];
-
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    numOfTiles *= m_SettingValue[i];
-    tileNumber[i] = m_SettingValue[i];
-    tileSize[i] = m_SettingValue[9+i];
-  }
-
-  // Read next two lines
-  StringVectorType m_TileInfoName;
-  m_TileInfoName.resize( 100 );
-
-  std::getline ( infile, line);
-  std::stringstream tileInfoNameStream( line );
-
-  for( unsigned int i = 0; i < 9; i++ )
-  {
-    std::getline ( tileInfoNameStream, value, ',' );
-    m_TileInfoName[i] = value;
-    //std::cout << value << std::endl;
-  }
-
-  vnlMatrixType m_TileInfoValue (numOfTiles, 9);
-  for( unsigned int i = 0; i < numOfTiles; )
-  {
-    //    std::cout << i << std::endl;
-    std::getline ( infile, line);
-
-    char dummy = line.c_str()[0];
-    if( ( dummy != '-' ) )
-    {
-      std::stringstream tileInfoValueStream( line );
-
-      for( unsigned int j = 0; j < 9; j++ )
-      {
-        std::getline ( tileInfoValueStream, value, ',' );
-        m_TileInfoValue[i][j] = atof( value.c_str() );
-        //std::cout << ' ' << value;
-      }
-
-      //std::cout << std::endl;
-      i++;
-    }
-    else
-    {
-      //std::cout << std::endl;
-    }
-  }
-
-  vnlVectorType tileCenter, stitchCenter, newCenter;
-  tileCenter.set_size( Dimension );
-  stitchCenter.set_size( Dimension );
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    stitchCenter[i] = m_TileInfoValue.get_column(i+6).mean();
-    //std::cout << stitchCenter[i] << ' ';
-  }
-  //std::cout << std::endl;
-
-  double theta = 31.8 * vnl_math::pi_over_180;
-  vnlMatrixType rotMatrix( Dimension, Dimension );
-  rotMatrix[0][0] = rotMatrix[0][2] = rotMatrix[1][1] = rotMatrix[2][1] = 0.0;
-  rotMatrix[0][1] = -1;
-  rotMatrix[1][0] = -vcl_cos( theta );
-  rotMatrix[2][2] = vcl_cos( theta );
-  rotMatrix[1][2] = rotMatrix[2][0] = vcl_sin( theta );
-
-  //std::cout << rotMatrix << std::endl;
-
-  vnlMatrixType m_TransformedTileInfoValue (numOfTiles, 3*Dimension);
-  for( unsigned int i = 0; i < numOfTiles; i++ )
-  {
-    for( unsigned int j = 0; j < Dimension; j++ )
-    {
-      tileCenter[j] = m_TileInfoValue[i][j+6];
-      //std::cout << m_TileInfoValue[i][j] << ' ';
-    }
-
-    newCenter = rotMatrix * ( tileCenter - stitchCenter );
-
-    //std::cout << newCenter << std::endl;
-
-    for( unsigned int j = 0; j < Dimension; j++ )
-    {
-      m_TransformedTileInfoValue[i][j] = newCenter[j];
-      m_TransformedTileInfoValue[i][j+Dimension] = newCenter[j] - 0.5*tileSize[j];
-      m_TransformedTileInfoValue[i][j+2*Dimension] = newCenter[j] + 0.5*tileSize[j];
-    }
-  }
-
-  // Create a vector of tile origins along each axis
-  DoubleVectorType tileCoverStart[3];
-  DoubleVectorType tileCoverEnd[3];
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    tileCoverStart[i].resize( tileNumber[i] );
-    tileCoverEnd[i].resize( tileNumber[i] );
-  }
-
-  for( unsigned int i = 0; i < numOfTiles; i++ )
-  {
-    for( unsigned int j = 0; j < Dimension; j++ )
-    {
-      unsigned int temp =  m_TileInfoValue[i][j];
-      tileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
-      tileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
-    }
-  }
-
-  vnlVectorType minStart( 3 );
-  vnlVectorType maxEnd( 3 );
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    minStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
-    maxEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
-  }
-
+  SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
+  settingsReader->Read( infile );
   infile.close();
 
-  // Read all the files in the input directory of type ch and at timePoint
-  std::string filename;
-  std::stringstream searchStringCH, searchStringXYZT, filename2;
 
-  DirectoryType::Pointer directory = DirectoryType::New();
-  directory->Load( argv[2] );
+  StringVectorType m_SettingName = settingsReader->GetSettingFieldNames();
+  DoubleVectorType m_SettingValue; = settingsReader->GetSettingFieldValues();
 
-  StringArray3DType tileFileNameArray;
-  tileFileNameArray.resize( m_SettingValue[0] );
+  std::string value, line;
 
-  for( unsigned int i = 0; i < tileNumber[0]; i++ )
-  {
-    tileFileNameArray[i].resize( tileNumber[1] );
-    for( unsigned int j = 0; j < tileNumber[1]; j++ )
-    {
-      tileFileNameArray[i][j].resize( tileNumber[2] );
-      for( unsigned int k = 0; k < tileNumber[2]; k++ )
-      {
-        tileFileNameArray[i][j][k] = std::string();
-        searchStringCH << "_ch" << argv[3];
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << argv[4] << "t.mha";
-
-        //std::cout << i << j << k << std::endl;
-        for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
-        {
-          filename = directory->GetFile( m );
-
-          if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
-               ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
-          {
-            //std::cout << filename << std::endl;
-            filename2 << argv[2] << filename;
-            tileFileNameArray[i][j][k] = filename2.str();
-          }
-          filename2.str( std::string() );
-        }
-        searchStringCH.str( std::string() );
-        searchStringXYZT.str( std::string() );
-      }
-    }
-  }
-
-  // Read one image to get tilePixelDimensions and spacing
-  ReaderType::Pointer reader = ReaderType::New();
-  reader->SetFileName ( tileFileNameArray[0][0][0] );
-  reader->SetGlobalWarningDisplay( 0 );
-  reader->Update();
-  ImageType::Pointer currentImage = reader->GetOutput();
-  ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
-
-  ImageType::SpacingType spacing;
-  spacing[0] = tileSize[0]/tilePixelDimension[0];
-  spacing[1] = tileSize[1]/tilePixelDimension[1];
-  spacing[2] = tileSize[2]/tilePixelDimension[2];
+  // Setup the dimensions of the largest stitched image
+  unsigned int numOfTiles = settingsReader->m_NumberOfTiles;
+  double tileNumber[3];
+  tileNumber = settingsReader->GetTileNumber();
+  double tileSize[3];
+  tileSize = settingsReader->GetTileSize();
 
   std::cout << "Tile number" << std::endl;
   std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
