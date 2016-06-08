@@ -49,7 +49,6 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
-#include "itkPermuteAxesImageFilter.h"
 
 
 int main ( int argc, char* argv[] )
@@ -74,7 +73,6 @@ int main ( int argc, char* argv[] )
   typedef itk::Image< PixelType, Dimension > ImageType;
   typedef itk::ImageFileReader< ImageType > ReaderType;
   typedef itk::ImageRegionIteratorWithIndex< ImageType > IteratorType;
-  typedef itk::PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
 
   typedef ImageType::SizeType SizeType;
   typedef ImageType::IndexType IndexType;
@@ -265,7 +263,7 @@ int main ( int argc, char* argv[] )
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << argv[4] << "t.tif";
+        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << argv[4] << "t.mha";
 
         //std::cout << i << j << k << std::endl;
         for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
@@ -279,6 +277,7 @@ int main ( int argc, char* argv[] )
             filename2 << argv[2] << filename;
             tileFileNameArray[i][j][k] = filename2.str();
           }
+          filename2.str( std::string() );
         }
         searchStringCH.str( std::string() );
         searchStringXYZT.str( std::string() );
@@ -295,8 +294,8 @@ int main ( int argc, char* argv[] )
   ImageType::SizeType tilePixelDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
   ImageType::SpacingType spacing;
-  spacing[0] = tileSize[0]/tilePixelDimension[1];
-  spacing[1] = tileSize[1]/tilePixelDimension[0];
+  spacing[0] = tileSize[0]/tilePixelDimension[0];
+  spacing[1] = tileSize[1]/tilePixelDimension[1];
   spacing[2] = tileSize[2]/tilePixelDimension[2];
 
   std::cout << "Tile number" << std::endl;
@@ -342,9 +341,11 @@ int main ( int argc, char* argv[] )
 
   ImageType::RegionType roi;
 
-  ImageType::IndexType  roiIndex;
+  ImageType::IndexType  roiIndex, tempIndex;
   roiIndex = stitchIndex;
-  roiIndex[2] = zStart;
+
+  tempIndex = stitchIndex;
+  tempIndex[2] = zStart;
 
   ImageType::SizeType   roiSize;
   roiSize = stitchDimension;
@@ -354,7 +355,7 @@ int main ( int argc, char* argv[] )
   roi.SetSize( roiSize );
 
   ImageType::PointType  roiOrigin;
-  stitchedImage->TransformIndexToPhysicalPoint( roiIndex, roiOrigin );
+  stitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
 
   ImageType::Pointer roiImage = ImageType::New();
   roiImage->SetOrigin( roiOrigin );
@@ -392,12 +393,6 @@ int main ( int argc, char* argv[] )
   std::cout << zScanStart << ' ' << zScanEnd << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
-
-  itk::FixedArray<unsigned int, 3> axesOrder;
-  axesOrder[0] = 1;
-  axesOrder[1] = 0;
-  axesOrder[2] = 2;
-
   ImageType::PointType currentTileOrigin;
   ImageType::RegionType currentTileRegion, roiSubRegion;
   for( unsigned int i = 0; i < tileNumber[0]; i++ )
@@ -411,18 +406,22 @@ int main ( int argc, char* argv[] )
         currentTileOrigin[2] = tileCoverStart[2][k];
 
         filename = tileFileNameArray[i][j][k];
+//        std::cout << filename << std::endl;
 
         ReaderType::Pointer reader = ReaderType::New();
         reader->SetFileName( filename.c_str() );
         reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
 
-        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
-        pAFilter->SetInput( reader->GetOutput() );
-        pAFilter->SetOrder( axesOrder );
-        pAFilter->Update();
+        ImageType::Pointer currentImage = reader->GetOutput();
 
-        ImageType::Pointer currentImage = pAFilter->GetOutput();
+ //       std::cout << "Current Tile Origin" << std::endl;
+ //       std::cout << currentTileOrigin << std::endl;
+ //       std::cout << currentImage->GetLargestPossibleRegion().GetIndex() << std::endl;
+
+ //       std::cout << "ROI Origin" << std::endl;
+ //       std::cout << roiOrigin << std::endl;
+ //       std::cout << roiIndex << std::endl;
 
         currentImage->SetOrigin( currentTileOrigin );
         currentTileRegion = currentImage->GetLargestPossibleRegion();
@@ -435,6 +434,13 @@ int main ( int argc, char* argv[] )
         IndexType tIndexA, tIndexB;
         currentImage->TransformPhysicalPointToIndex( roiOrigin, tIndexA );
         roiImage->TransformPhysicalPointToIndex( currentTileOrigin, tIndexB );
+
+//        std::cout << "Current Tile Index" << std::endl;
+//        std::cout << tIndexA << std::endl;
+
+//        std::cout << "ROI Index" << std::endl;
+//        std::cout << tIndexB << std::endl;
+
 
         IndexType sIndexA, sIndexB;
         for( unsigned int p = 0; p < Dimension; p++ )
@@ -459,12 +465,20 @@ int main ( int argc, char* argv[] )
               s[p] = sizeA[p] - sIndexA[p];
             }
           }
+//          std::cout << "Current Tile Index" << std::endl;
+//          std::cout << sIndexA << std::endl;
+
+//          std::cout << "ROI Index" << std::endl;
+//          std::cout << sIndexB << std::endl;
         }
 
         currentTileRegion.SetIndex( sIndexA );
         currentTileRegion.SetSize( s );
         roiSubRegion.SetIndex( sIndexB );
         roiSubRegion.SetSize( s );
+
+//        std::cout << roiSubRegion << std::endl;
+//        std::cout << currentTileRegion << std::endl;
 
         // Using these images, fill up roiImage
         IteratorType rIt( roiImage, roiSubRegion );
@@ -484,7 +498,11 @@ int main ( int argc, char* argv[] )
   }
 
   std::stringstream oFilename;
-  oFilename << argv[7] << std::setfill( '0' ) << std::setw( 3 ) << "%d.tif";
+  oFilename << argv[7] << "ch" << argv[3] << "_" ;
+  oFilename << std::setfill( '0' ) << std::setw( 4 ) << argv[4];
+  oFilename << "_%03dz.tif";
+
+  std::cout << oFilename.str().c_str() << std::endl;
 
   // Set filename format
   NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();

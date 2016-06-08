@@ -77,7 +77,7 @@ int main ( int argc, char* argv[] )
   typedef itk::PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
   typedef itk::RescaleIntensityImageFilter< ImageType, ImageType > RescaleFilterType;
 
-  typedef unsigned char OutputPixelType;
+  typedef unsigned short OutputPixelType;
   typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
   typedef itk::CastImageFilter< ImageType, OutputImageType > CastFilterType;
   typedef itk::ImageFileWriter< OutputImageType >  WriterType;
@@ -219,15 +219,32 @@ int main ( int argc, char* argv[] )
             pAFilter->SetInput( reader->GetOutput() );
             pAFilter->SetOrder( axesOrder );
             pAFilter->Update();
+            ImageType::Pointer pImage = pAFilter->GetOutput();
 
+            ImageType::Pointer currentImage = ImageType::New();
+            currentImage->SetOrigin( pImage->GetOrigin() );
+            currentImage->SetSpacing( pImage->GetSpacing() );
+            currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+            currentImage->Allocate();
+
+            IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+            IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+            while(!pIt.IsAtEnd())
+            {
+              cIt.Set( pIt.Get() );
+              ++pIt;
+              ++cIt;
+            }
+
+/*
             RescaleFilterType::Pointer rescale = RescaleFilterType::New();
-            rescale->SetInput( pAFilter->GetOutput() );
+            rescale->SetInput( currentImage );
             rescale->SetOutputMinimum( 0 );
-            rescale->SetOutputMaximum( itk::NumericTraits<OutputPixelType>::max );
+            rescale->SetOutputMaximum( 255 );
             rescale->Update();
-
+*/
             CastFilterType::Pointer caster = CastFilterType::New();
-            caster->SetInput( rescale->GetOutput() );
+            caster->SetInput( currentImage );//rescale->GetOutput()
             caster->Update();
 
             unsigned int lastindex = filename.find_last_of( "." );
