@@ -329,15 +329,12 @@ AllocateROI()
     CreateStitchImage();
   }
 
-  std::cout <<  "Allocating ROI image..." << std::endl;
-  std::cout << m_ROI << std::endl;
   m_ROIImage = ImageType::New();
   m_ROIImage->SetOrigin( m_ROIOrigin );
   m_ROIImage->SetSpacing( m_TileSpacing );
   m_ROIImage->SetRegions( m_ROI );
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
-  std::cout <<  "Allocated ROI image..." << std::endl;
 
   // Identify all the tiles that belong to this roi
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -376,7 +373,7 @@ AllocateROI()
       m_ScanStart[k] = temp;
     }
 
-    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
+    //std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
@@ -458,7 +455,7 @@ FillROI()
         if ( m_ROI.IsInside( temp ) )
         {
           std::string filename = m_TileFileNameArray[i][j][k];
-          std::cout << filename.c_str() << std::endl;
+          //std::cout << filename.c_str() << std::endl;
 
           ReaderPointer reader = ReaderType::New();
           reader->SetFileName( filename.c_str() );
@@ -467,16 +464,16 @@ FillROI()
           ImagePointer currentImage = reader->GetOutput();
           currentImage->SetOrigin( currentTileOrigin );
 
-          std::cout << "Current tile origin" << std::endl;
-          std::cout << currentTileOrigin << std::endl;
+          //std::cout << "Current tile origin" << std::endl;
+          //std::cout << currentTileOrigin << std::endl;
 
           OverlapRegion( currentImage, m_ROIImage, currentTileRegion, roiSubRegion );
 
-          std::cout << "Current tile region" << std::endl;
-          std::cout << currentTileRegion << std::endl;
+          //std::cout << "Current tile region" << std::endl;
+          //std::cout << currentTileRegion << std::endl;
 
-          std::cout << "ROI region" << std::endl;
-          std::cout << roiSubRegion << std::endl;
+          //std::cout << "ROI region" << std::endl;
+          //std::cout << roiSubRegion << std::endl;
 
 
           // Using these images, fill up roiImage

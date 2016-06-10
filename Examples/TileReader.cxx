@@ -168,9 +168,6 @@ int main ( int argc, char* argv[] )
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
-
-  std::cout << "Allocate and fill ROI..." << std::endl;
-
   settingsReader->AllocateROI();
 
   std::stringstream oFilename;
