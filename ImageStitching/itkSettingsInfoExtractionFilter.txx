@@ -456,10 +456,20 @@ FillROI()
         reader->SetFileName( filename.c_str() );
         reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
-
         ImagePointer currentImage = reader->GetOutput();
         currentImage->SetOrigin( currentTileOrigin );
+
+        std::cout << "Current tile origin" << std::endl;
+        std::cout << currentTileOrigin << std::endl;
+
         OverlapRegion( currentImage, m_ROIImage, currentTileRegion, roiSubRegion );
+
+        std::cout << "Current tile region" << std::endl;
+        std::cout << currentTileRegion << std::endl;
+
+        std::cout << "ROI region" << std::endl;
+        std::cout << roiSubRegion << std::endl;
+
 
         // Using these images, fill up roiImage
         IteratorType rIt( m_ROIImage, roiSubRegion );
