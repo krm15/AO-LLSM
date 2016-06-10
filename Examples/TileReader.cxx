@@ -54,10 +54,10 @@
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 6 )
+  if ( argc < 7 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir "
+    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
     std::cerr << "iChannelNumber iTimePoint iZStart iZEnd" << std::endl;
     return EXIT_FAILURE;
   }
