@@ -57,8 +57,8 @@ int main ( int argc, char* argv[] )
   if ( argc < 6 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir iChannelNumber ";
-    std::cerr << "iTimePoint iZStart iZEnd oOutputImageDir" << std::endl;
+    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir "
+    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -70,13 +70,12 @@ int main ( int argc, char* argv[] )
   typedef itk::Directory DirectoryType;
   typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
 
-  typedef itk::SettingsInfoExtractionFilter< double > SettingsFilterType;
-
   typedef unsigned short PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
   typedef itk::ImageFileReader< ImageType > ReaderType;
   typedef itk::ImageRegionIteratorWithIndex< ImageType > IteratorType;
 
+  typedef ImageType::SpacingType SpacingType;
   typedef ImageType::SizeType SizeType;
   typedef ImageType::IndexType IndexType;
   typedef ImageType::RegionType RegionType;
@@ -86,6 +85,7 @@ int main ( int argc, char* argv[] )
   typedef itk::Image< PixelType, 2 > RImageType;
   typedef itk::NumericSeriesFileNames NameGeneratorType;
   typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
+  typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
 
   std::string settingsFilename = argv[1];
   std::ifstream infile ( settingsFilename.c_str() );
@@ -96,224 +96,83 @@ int main ( int argc, char* argv[] )
   }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
+  settingsReader->SetTileDirectory( argv[2] );
+  settingsReader->SetChannelNumber( atoi(argv[4]) );
+  settingsReader->SetTimePoint( atoi(argv[5]) );
   settingsReader->Read( infile );
   infile.close();
 
+  StringVectorType m_SettingName;
+  DoubleVectorType m_SettingValue;
 
-  StringVectorType m_SettingName = settingsReader->GetSettingFieldNames();
-  DoubleVectorType m_SettingValue; = settingsReader->GetSettingFieldValues();
-
-  std::string value, line;
+  settingsReader->GetSettingFieldName( m_SettingName );
+  settingsReader->GetSettingFieldValue( m_SettingValue );
 
   // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = settingsReader->m_NumberOfTiles;
-  double tileNumber[3];
+  unsigned int numOfTiles = settingsReader->GetTotalNumberOfTiles();
+  unsigned int *tileNumber;
   tileNumber = settingsReader->GetTileNumber();
-  double tileSize[3];
+
+  double *tileSize;
   tileSize = settingsReader->GetTileSize();
 
+  SizeType tilePixelDimension = settingsReader->GetTileDimension();
+  SpacingType spacing = settingsReader->GetTileSpacing();
+
+  std::cout << "Number of tiles " << numOfTiles << std::endl;
   std::cout << "Tile number" << std::endl;
-  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' ' << tileNumber[2] << std::endl;
+  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' '
+                             << tileNumber[2] << std::endl;
   std::cout << " Tile size (um)" << std::endl;
-  std::cout << tileSize[0] << ' ' << tileSize[1] << ' ' << tileSize[2] << std::endl;
-  std::cout << "Tile pixel dimensions" << std::endl;
+  std::cout << tileSize[0] << ' ' << tileSize[1] << ' '
+                           << tileSize[2] << std::endl;
+  std::cout << "Tile pixel dimension" << std::endl;
   std::cout << tilePixelDimension << std::endl;
   std::cout << "Tile spacing" << std::endl;
   std::cout << spacing << std::endl;
 
-  // Create the dimensions of the large image
-  double                stitchSize[3];
-  ImageType::PointType  stitchOrigin;
-  ImageType::SizeType   stitchDimension;
-  ImageType::IndexType  stitchIndex;
-  ImageType::RegionType stitchRegion;
 
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    stitchIndex[i]     = 0;
-    stitchSize[i]      = maxEnd[i] - minStart[i];
-    stitchOrigin[i]    = minStart[i];
-    stitchDimension[i] = stitchSize[i]/spacing[i];
-  }
-
-  ImageType::Pointer stitchedImage = ImageType::New();
-  stitchedImage->SetOrigin( stitchOrigin );
-  stitchedImage->SetSpacing( spacing );
-  stitchedImage->SetRegions( stitchRegion );
+  settingsReader->CreateStitchImage();
 
   std::cout << std::endl;
   std::cout << "Stitched image origin" << std::endl;
-  std::cout << stitchOrigin << std::endl;
+  std::cout << settingsReader->GetStitchOrigin() << std::endl;
   std::cout << "Stitched image dimensions" << std::endl;
-  std::cout << stitchDimension << std::endl;
+  std::cout << settingsReader->GetStitchDimension() << std::endl;
   std::cout << "Stitched image size" << std::endl;
-  std::cout << stitchSize[0] << ' ' << stitchSize[1] << ' ' << stitchSize[2] << std::endl;
+  std::cout << settingsReader->GetStitchSize()[0] << ' ';
+  std::cout << settingsReader->GetStitchSize()[1] << ' ';
+  std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
   // Given zStart and zEnd, assemble an ROI
-  unsigned int zStart = atoi( argv[5] );
-  unsigned int zEnd = atoi( argv[6] );
+  unsigned int zStart = atoi( argv[6] );
+  unsigned int zEnd = atoi( argv[7] );
 
-  ImageType::RegionType roi;
+  IndexType  roiIndex;
+  roiIndex.Fill( 0 );
 
-  ImageType::IndexType  roiIndex, tempIndex;
-  roiIndex = stitchIndex;
-
-  tempIndex = stitchIndex;
-  tempIndex[2] = zStart;
-
-  ImageType::SizeType   roiSize;
-  roiSize = stitchDimension;
+  SizeType roiSize = settingsReader->GetStitchDimension();
   roiSize[2] = zEnd - zStart + 1;
 
+  RegionType roi;
   roi.SetIndex( roiIndex );
   roi.SetSize( roiSize );
 
-  ImageType::PointType  roiOrigin;
-  stitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
+  IndexType tempIndex;
+  tempIndex.Fill( 0 );
+  tempIndex[2] = zStart;
 
-  ImageType::Pointer roiImage = ImageType::New();
-  roiImage->SetOrigin( roiOrigin );
-  roiImage->SetSpacing( spacing );
-  roiImage->SetRegions( roi );
-  roiImage->Allocate();
-  roiImage->FillBuffer( 0.0 );
+  PointType  roiOrigin;
+  ImageType::Pointer m_StitchedImage = settingsReader->GetStitchImage();
+  m_StitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
 
-  // Identify all the tiles that belong to this roi
-  double zBeginOrigin = roiOrigin[2];
-  double zEndOrigin = roiOrigin[2] + roiSize[2]*spacing[2];
-
-  unsigned int zScanStart = 1000000, zScanEnd = 0;
-  for( unsigned int i = 0; i < tileNumber[2]; i++ )
-  {
-    //std::cout << tileCoverStart[2][i] << ' ' << tileCoverEnd[2][i] << std::endl;
-
-    if ( ( zBeginOrigin >= tileCoverStart[2][i] ) &&
-         ( zBeginOrigin <= tileCoverEnd[2][i] ) &&
-         ( zScanStart > i ) )
-    {
-      zScanStart = i;
-    }
-
-    if ( ( zEndOrigin >= tileCoverStart[2][i] ) &&
-         ( zEndOrigin <= tileCoverEnd[2][i] ) &&
-         ( zScanEnd < i ) )
-    {
-      zScanEnd = i;
-    }
-  }
-
-  std::cout << std::endl;
-  std::cout << "Tile z steps under consideration" << std::endl;
-  std::cout << zScanStart << ' ' << zScanEnd << std::endl;
-
-  // Start a loop that will read all the tiles from zScanStart to zScanEnd
-  ImageType::PointType currentTileOrigin;
-  ImageType::RegionType currentTileRegion, roiSubRegion;
-  for( unsigned int i = 0; i < tileNumber[0]; i++ )
-  {
-    currentTileOrigin[0] = tileCoverStart[0][i];
-    for( unsigned int j = 0; j < tileNumber[1]; j++ )
-    {
-      currentTileOrigin[1] = tileCoverStart[1][j];
-      for( unsigned int k = zScanStart; k < zScanEnd; k++ )
-      {
-        currentTileOrigin[2] = tileCoverStart[2][k];
-
-        filename = tileFileNameArray[i][j][k];
-//        std::cout << filename << std::endl;
-
-        ReaderType::Pointer reader = ReaderType::New();
-        reader->SetFileName( filename.c_str() );
-        reader->SetGlobalWarningDisplay( 0 );
-        reader->Update();
-
-        ImageType::Pointer currentImage = reader->GetOutput();
-
- //       std::cout << "Current Tile Origin" << std::endl;
- //       std::cout << currentTileOrigin << std::endl;
- //       std::cout << currentImage->GetLargestPossibleRegion().GetIndex() << std::endl;
-
- //       std::cout << "ROI Origin" << std::endl;
- //       std::cout << roiOrigin << std::endl;
- //       std::cout << roiIndex << std::endl;
-
-        currentImage->SetOrigin( currentTileOrigin );
-        currentTileRegion = currentImage->GetLargestPossibleRegion();
-
-        // Map the two regions roiSubRegion, roiOrigin
-        SizeType sizeA, sizeB, s;
-        sizeA = currentTileRegion.GetSize();
-        sizeB = roiSize;
-
-        IndexType tIndexA, tIndexB;
-        currentImage->TransformPhysicalPointToIndex( roiOrigin, tIndexA );
-        roiImage->TransformPhysicalPointToIndex( currentTileOrigin, tIndexB );
-
-//        std::cout << "Current Tile Index" << std::endl;
-//        std::cout << tIndexA << std::endl;
-
-//        std::cout << "ROI Index" << std::endl;
-//        std::cout << tIndexB << std::endl;
-
-
-        IndexType sIndexA, sIndexB;
-        for( unsigned int p = 0; p < Dimension; p++ )
-        {
-          if ( currentTileOrigin[p] > roiOrigin[p] )
-          {
-            sIndexA[p] = 0;
-            sIndexB[p] = tIndexB[p];
-            s[p] = sizeA[p];
-            if ( s[p] > static_cast< SizeValueType >( sizeB[p] - sIndexB[p] - 1 ) )
-            {
-              s[p] = sizeB[p] - sIndexB[p];
-            }
-          }
-          else
-          {
-            sIndexB[p] = 0;
-            sIndexA[p] = tIndexA[p];
-            s[p] = sizeB[p];
-            if ( s[p] > static_cast< SizeValueType >( sizeA[p] - sIndexA[p] - 1 ) )
-            {
-              s[p] = sizeA[p] - sIndexA[p];
-            }
-          }
-//          std::cout << "Current Tile Index" << std::endl;
-//          std::cout << sIndexA << std::endl;
-
-//          std::cout << "ROI Index" << std::endl;
-//          std::cout << sIndexB << std::endl;
-        }
-
-        currentTileRegion.SetIndex( sIndexA );
-        currentTileRegion.SetSize( s );
-        roiSubRegion.SetIndex( sIndexB );
-        roiSubRegion.SetSize( s );
-
-//        std::cout << roiSubRegion << std::endl;
-//        std::cout << currentTileRegion << std::endl;
-
-        // Using these images, fill up roiImage
-        IteratorType rIt( roiImage, roiSubRegion );
-        rIt.GoToBegin();
-
-        IteratorType cIt( currentImage, currentTileRegion );
-        cIt.GoToBegin();
-
-        while( !cIt.IsAtEnd() )
-        {
-          rIt.Set( cIt.Get() );
-          ++cIt;
-          ++rIt;
-        }
-      }
-    }
-  }
+  settingsReader->SetROIOrigin( roiOrigin );
+  settingsReader->SetROI( roi );
+  settingsReader->AllocateROI();
 
   std::stringstream oFilename;
-  oFilename << argv[7] << "ch" << argv[3] << "_" ;
-  oFilename << std::setfill( '0' ) << std::setw( 4 ) << argv[4];
+  oFilename << argv[3] << "ch" << argv[4] << "_" ;
+  oFilename << std::setfill( '0' ) << std::setw( 4 ) << argv[5];
   oFilename << "_%03dz.tif";
 
   std::cout << oFilename.str().c_str() << std::endl;
@@ -327,11 +186,9 @@ int main ( int argc, char* argv[] )
 
   // Write out using Series writer
   SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
-  series_writer->SetInput( roiImage );
+  series_writer->SetInput( settingsReader->GetROIImage() );
   series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
   series_writer->Update();
-
-
 
   return EXIT_SUCCESS;
   }

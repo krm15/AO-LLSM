@@ -58,43 +58,215 @@
 #include <vnl_vector.h>
 #include <vnl_matrix.h>
 #include "itkDirectory.h"
+#include "itkImageFileReader.h"
+#include "itkImageRegionIterator.h"
 
 
 namespace itk
 {
-template < class TValueType >
+template < class TValueType, class TInputImage >
 class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
 {
   public:
-    typedef SettingsInfoExtractionFilter Self;
-    typedef LightObject                  Superclass;
-    typedef SmartPointer< Self >         Pointer;
-    typedef SmartPointer< const Self >   ConstPointer;
+  typedef SettingsInfoExtractionFilter Self;
+  typedef LightObject                  Superclass;
+  typedef SmartPointer< Self >         Pointer;
+  typedef SmartPointer< const Self >   ConstPointer;
 
-    /** Method for creation through object factory */
-    itkNewMacro ( Self );
+  itkStaticConstMacro ( ImageDimension, unsigned int,
+    TInputImage::ImageDimension );
 
-    /** Run-time type information */
-    itkTypeMacro ( SettingsInfoExtractionFilter, LightObject );
+  /** Method for creation through object factory */
+  itkNewMacro ( Self );
 
-    typedef TValueType ValueType;
+  /** Run-time type information */
+  itkTypeMacro ( SettingsInfoExtractionFilter, LightObject );
 
-    typedef std::vector< std::string > StringVectorType;
-    typedef std::vector< ValueType > DoubleVectorType;
-    typedef vnl_matrix< ValueType > vnlMatrixType;
-    typedef vnl_vector< ValueType > vnlVectorType;
-    typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
-    typedef itk::Directory DirectoryType;
+  typedef TValueType ValueType;
 
-    void Read( std::istream& os );
+  typedef std::vector< std::string > StringVectorType;
+  typedef std::vector< ValueType > DoubleVectorType;
+  typedef vnl_matrix< ValueType > vnlMatrixType;
+  typedef vnl_vector< ValueType > vnlVectorType;
+  typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
+  typedef Directory DirectoryType;
+  typedef typename DirectoryType::Pointer DirectoryPointer;
+
+  typedef TInputImage ImageType;
+  typedef typename ImageType::Pointer ImagePointer;
+  typedef ImageFileReader< ImageType > ReaderType;
+  typedef typename ReaderType::Pointer ReaderPointer;
+  typedef itk::ImageRegionIterator< ImageType > IteratorType;
+
+  typedef typename ImageType::PixelType PixelType;
+  typedef typename ImageType::SizeType SizeType;
+  typedef typename ImageType::SpacingType SpacingType;
+  typedef typename ImageType::IndexType IndexType;
+  typedef typename ImageType::RegionType RegionType;
+  typedef typename ImageType::PointType PointType;
+  typedef typename SizeType::SizeValueType SizeValueType;
+
+  void Read( std::istream& os );
+  void UpdateFileNameLookup( std::istream& os );
+  void CreateStitchImage();
+  void AllocateROI();
+
+  void GetSettingFieldName( StringVectorType& name )
+  {
+    name = m_SettingName;
+  }
+
+  void GetSettingFieldValue( DoubleVectorType& name )
+  {
+    name = m_SettingValue;
+  }
+
+  unsigned int GetTotalNumberOfTiles()
+  {
+    return this->m_NumberOfTiles;
+  }
+
+  unsigned int * GetTileNumber()
+  {
+    return m_TileNumber;
+  }
+
+  ValueType * GetTileSize()
+  {
+    return  m_TileSize;
+  }
+
+  PointType & GetMinimumStart()
+  {
+    return m_MinimumStart;
+  }
+
+  PointType & GetMaximumEnd()
+  {
+    return m_MaximumEnd;
+  }
+
+  SizeType& GetTileDimension()
+  {
+    return m_TileDimension;
+  }
+
+  SpacingType& GetTileSpacing()
+  {
+    return m_TileSpacing;
+  }
+
+  void SetTileDirectory( std::string iDirectory )
+  {
+    m_Directory = iDirectory;
+  }
+
+
+  void SetChannelNumber( unsigned int iChannel )
+  {
+    m_ChannelNumber = iChannel;
+  }
+
+  void SetTimePoint( unsigned int iTp )
+  {
+    m_TimePoint = iTp;
+  }
+
+  ValueType * GetStitchSize()
+  {
+    return  m_StitchSize;
+  }
+
+  PointType & GetStitchOrigin()
+  {
+    return m_StitchOrigin;
+  }
+
+  SizeType & GetStitchDimension()
+  {
+    return m_StitchDimension;
+  }
+
+  IndexType & GetStitchIndex()
+  {
+    return m_StitchIndex;
+  }
+
+  RegionType & GetStitchRegion()
+  {
+    return m_StitchRegion;
+  }
+
+  ImagePointer GetStitchImage()
+  {
+    return m_StitchedImage;
+  }
+
+  ImagePointer GetROIImage()
+  {
+    return m_ROIImage;
+  }
+
+  void SetROIOrigin( PointType& iOrigin )
+  {
+    m_ROIOrigin = iOrigin;
+  }
+
+  void SetROI( RegionType& iRegion )
+  {
+    m_ROI = iRegion;
+  }
+
 
   protected:
   SettingsInfoExtractionFilter();
   ~SettingsInfoExtractionFilter() {}
 
+  void UpdateStitchDimensions( std::istream& os );
+  void UpdateTileCoverage( std::istream& os );
+  void TransformCoordinateAxes();
+  void ReadTileInfo( std::istream& os );
+  void FillROI();
+  void OverlapRegion( ImagePointer A, ImagePointer B,
+                      RegionType& rA, RegionType& rB );
+
   unsigned int m_Dimension;
   StringVectorType m_SettingName;
   DoubleVectorType m_SettingValue;
+
+  std::string m_Path;
+  std::string m_Directory;
+  unsigned int m_ChannelNumber;
+  unsigned int m_TimePoint;
+
+  unsigned int m_NumberOfTiles;
+  unsigned int m_TileNumber[3];
+  ValueType m_TileSize[3];
+  SizeType m_TileDimension;
+  SpacingType m_TileSpacing;
+  StringArray3DType m_TileFileNameArray;
+
+  PointType m_MinimumStart;
+  PointType m_MaximumEnd;
+
+  DoubleVectorType m_TileCoverStart[3];
+  DoubleVectorType m_TileCoverEnd[3];
+  unsigned int m_ScanStart[3];
+  unsigned int m_ScanEnd[3];
+
+  vnlMatrixType m_TileInfoValue;
+  vnlMatrixType m_TransformedTileInfoValue;
+
+  ImagePointer m_StitchedImage;
+  double     m_StitchSize[3];
+  PointType  m_StitchOrigin;
+  SizeType   m_StitchDimension;
+  IndexType  m_StitchIndex;
+  RegionType m_StitchRegion;
+
+  ImagePointer m_ROIImage;
+  PointType m_ROIOrigin;
+  RegionType m_ROI;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented
