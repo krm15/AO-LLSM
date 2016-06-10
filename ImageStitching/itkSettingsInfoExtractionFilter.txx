@@ -329,6 +329,8 @@ AllocateROI()
     CreateStitchImage();
   }
 
+  std::cout <<  "Allocating ROI image..." << std::endl;
+  std::cout << m_ROI << std::endl;
   m_ROIImage = ImageType::New();
   m_ROIImage->SetOrigin( m_ROIOrigin );
   m_ROIImage->SetSpacing( m_TileSpacing );
@@ -440,6 +442,7 @@ FillROI()
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
+  IndexType temp;
   for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
   {
     currentTileOrigin[0] = m_TileCoverStart[0][i];
@@ -449,40 +452,46 @@ FillROI()
       for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
       {
         currentTileOrigin[2] = m_TileCoverStart[2][k];
-        std::string filename = m_TileFileNameArray[i][j][k];
-        std::cout << filename.c_str() << std::endl;
 
-        ReaderPointer reader = ReaderType::New();
-        reader->SetFileName( filename.c_str() );
-        reader->SetGlobalWarningDisplay( 0 );
-        reader->Update();
-        ImagePointer currentImage = reader->GetOutput();
-        currentImage->SetOrigin( currentTileOrigin );
+        m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
 
-        std::cout << "Current tile origin" << std::endl;
-        std::cout << currentTileOrigin << std::endl;
-
-        OverlapRegion( currentImage, m_ROIImage, currentTileRegion, roiSubRegion );
-
-        std::cout << "Current tile region" << std::endl;
-        std::cout << currentTileRegion << std::endl;
-
-        std::cout << "ROI region" << std::endl;
-        std::cout << roiSubRegion << std::endl;
-
-
-        // Using these images, fill up roiImage
-        IteratorType rIt( m_ROIImage, roiSubRegion );
-        rIt.GoToBegin();
-
-        IteratorType cIt( currentImage, currentTileRegion );
-        cIt.GoToBegin();
-
-        while( !cIt.IsAtEnd() )
+        if ( m_ROI.IsInside( temp ) )
         {
-          rIt.Set( cIt.Get() );
-          ++cIt;
-          ++rIt;
+          std::string filename = m_TileFileNameArray[i][j][k];
+          std::cout << filename.c_str() << std::endl;
+
+          ReaderPointer reader = ReaderType::New();
+          reader->SetFileName( filename.c_str() );
+          reader->SetGlobalWarningDisplay( 0 );
+          reader->Update();
+          ImagePointer currentImage = reader->GetOutput();
+          currentImage->SetOrigin( currentTileOrigin );
+
+          std::cout << "Current tile origin" << std::endl;
+          std::cout << currentTileOrigin << std::endl;
+
+          OverlapRegion( currentImage, m_ROIImage, currentTileRegion, roiSubRegion );
+
+          std::cout << "Current tile region" << std::endl;
+          std::cout << currentTileRegion << std::endl;
+
+          std::cout << "ROI region" << std::endl;
+          std::cout << roiSubRegion << std::endl;
+
+
+          // Using these images, fill up roiImage
+          IteratorType rIt( m_ROIImage, roiSubRegion );
+          rIt.GoToBegin();
+
+          IteratorType cIt( currentImage, currentTileRegion );
+          cIt.GoToBegin();
+
+          while( !cIt.IsAtEnd() )
+          {
+            rIt.Set( cIt.Get() );
+            ++cIt;
+            ++rIt;
+          }
         }
       }
     }
