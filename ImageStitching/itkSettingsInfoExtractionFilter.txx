@@ -325,6 +325,7 @@ AllocateROI()
 {
   if ( !m_StitchedImage )
   {
+    std::cout <<  "Stitch image created" << std::endl;
     CreateStitchImage();
   }
 
@@ -334,6 +335,7 @@ AllocateROI()
   m_ROIImage->SetRegions( m_ROI );
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
+  std::cout <<  "Allocated ROI image..." << std::endl;
 
   // Identify all the tiles that belong to this roi
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -371,6 +373,8 @@ AllocateROI()
       m_ScanEnd[k] = m_ScanStart[k];
       m_ScanStart[k] = temp;
     }
+
+    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
@@ -446,6 +450,7 @@ FillROI()
       {
         currentTileOrigin[2] = m_TileCoverStart[2][k];
         std::string filename = m_TileFileNameArray[i][j][k];
+        std::cout << filename.c_str() << std::endl;
 
         ReaderPointer reader = ReaderType::New();
         reader->SetFileName( filename.c_str() );
