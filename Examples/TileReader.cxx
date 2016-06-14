@@ -54,11 +54,11 @@
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 7 )
+  if ( argc < 9 )
   {
     std::cerr << "Usage: " << std::endl;
     std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
-    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd" << std::endl;
+    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iCorrectionDir" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -99,6 +99,7 @@ int main ( int argc, char* argv[] )
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( atoi(argv[4]) );
   settingsReader->SetTimePoint( atoi(argv[5]) );
+  settingsReader->SetCorrectionDirectory( argv[8] );
   settingsReader->Read( infile );
   infile.close();
 
@@ -171,7 +172,7 @@ int main ( int argc, char* argv[] )
   settingsReader->AllocateROI();
 
   std::stringstream oFilename;
-  oFilename << argv[3] << settingsReader->m_ChannelName;
+  oFilename << argv[3] << settingsReader->GetChannelName();
   oFilename << "_" << argv[4] << "ch" ;
   oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << argv[5] << "t";
   oFilename << "_%03dz.tif";

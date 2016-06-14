@@ -100,7 +100,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
   typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
 
-
   typedef typename ImageType::PixelType PixelType;
   typedef typename ImageType::SizeType SizeType;
   typedef typename ImageType::SpacingType SpacingType;
@@ -108,6 +107,10 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   typedef typename ImageType::RegionType RegionType;
   typedef typename ImageType::PointType PointType;
   typedef typename SizeType::SizeValueType SizeValueType;
+
+  typedef itk::Image< PixelType, 2 > RImageType;
+  typedef RImageType::Pointer RImagePointer;
+
 
   void Read( std::istream& os );
   void UpdateFileNameLookup( std::istream& os );
@@ -164,6 +167,10 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
     m_Directory = iDirectory;
   }
 
+  void SetCorrectionDirectory( std::string iDirectory )
+  {
+    m_CorrectionDirectory = iDirectory;
+  }
 
   void SetChannelNumber( unsigned int iChannel )
   {
@@ -225,11 +232,10 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
     return m_TileFileNameArray;
   }
 
-  std::string m_Path;
-  std::string m_Directory;
-  std::string m_ChannelName;
-  unsigned int m_ChannelNumber;
-  unsigned int m_TimePoint;
+  std::string GetChannelName()
+  {
+    return m_ChannelName;
+  }
 
   protected:
   SettingsInfoExtractionFilter();
@@ -242,6 +248,14 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   void FillROI();
   void OverlapRegion( ImagePointer A, ImagePointer B,
                       RegionType& rA, RegionType& rB );
+  void ReadCorrectionImage();
+
+  std::string m_Path;
+  std::string m_Directory;
+  std::string m_CorrectionDirectory;
+  std::string m_ChannelName;
+  unsigned int m_ChannelNumber;
+  unsigned int m_TimePoint;
 
   unsigned int m_Dimension;
   StringVectorType m_SettingName;

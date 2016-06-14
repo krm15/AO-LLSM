@@ -312,7 +312,7 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadCorrectionImage()
 {
-
+  unsigned int pos = m_TileFileNameArray[0][0][0].find( searchString );
 }
 
 
