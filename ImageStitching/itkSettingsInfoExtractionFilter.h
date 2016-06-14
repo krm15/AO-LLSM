@@ -109,7 +109,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   typedef typename SizeType::SizeValueType SizeValueType;
 
   typedef itk::Image< PixelType, 2 > RImageType;
-  typedef RImageType::Pointer RImagePointer;
+  typedef typename RImageType::Pointer RImagePointer;
 
 
   void Read( std::istream& os );

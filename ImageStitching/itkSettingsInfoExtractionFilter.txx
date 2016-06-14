@@ -205,6 +205,10 @@ UpdateFileNameLookup( std::istream& os )
   std::string filename;
   std::stringstream searchStringCH, searchStringXYZT, filename2;
 
+  //Identify the channel type
+  bool ChannelNameSet = false;
+  std::string searchString = "nm";
+
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( m_Directory.c_str() );
 
@@ -236,6 +240,14 @@ UpdateFileNameLookup( std::istream& os )
             //std::cout << filename << std::endl;
             filename2 << m_Directory << filename;
             m_TileFileNameArray[i][j][k] = filename2.str();
+
+            if ( !ChannelNameSet )
+            {
+              unsigned int pos = filename.find( searchString );
+              m_ChannelName = filename.substr( pos-3, 5 );
+              ChannelNameSet = true;
+            }
+
           }
           filename2.str( std::string() );
         }
@@ -273,22 +285,22 @@ Read( std::istream& os )
   }
 
   ReadTileInfo( os );
+  std::cout << "Read tile info" << std::endl;
 
   TransformCoordinateAxes();
+  std::cout << "Transformed coordinate axes" << std::endl;
 
   // Identify total tile coverage
   UpdateStitchDimensions( os );
+  std::cout << "Updated stitch dimensions" << std::endl;
 
   // Create a vector of tile origins along each axis for given timepoint
   UpdateTileCoverage( os );
+  std::cout << "Updated tile coverage" << std::endl;
 
   // Create a lookup of filenames
   UpdateFileNameLookup( os );
-
-  //Identify the channel type
-  std::string searchString = "nm";
-  unsigned int pos = m_TileFileNameArray[0][0][0].find( searchString );
-  m_ChannelName = m_TileFileNameArray[0][0][0].substr( pos-3, 5 );
+  std::cout << "Updated file name lookup" << std::endl;
 
   // Read the correction image
   ReadCorrectionImage();
@@ -312,7 +324,7 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadCorrectionImage()
 {
-
+  //unsigned int pos = m_TileFileNameArray[0][0][0].find( searchString );
 }
 
 
