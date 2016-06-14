@@ -254,6 +254,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   std::string m_Directory;
   std::string m_CorrectionDirectory;
   std::string m_ChannelName;
+  std::string m_SampleName;
   unsigned int m_ChannelNumber;
   unsigned int m_TimePoint;
 

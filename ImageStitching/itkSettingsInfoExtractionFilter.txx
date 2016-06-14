@@ -246,6 +246,7 @@ UpdateFileNameLookup( std::istream& os )
               unsigned int pos = filename.find( searchString );
               m_ChannelName = filename.substr( pos-3, 5 );
               ChannelNameSet = true;
+              m_SampleName = filename2.str();
             }
 
           }
@@ -307,7 +308,7 @@ Read( std::istream& os )
 
   // Read one image to get m_TileDimensions and m_TileSpacing
   ReaderPointer reader = ReaderType::New();
-  reader->SetFileName ( m_TileFileNameArray[0][0][0] );
+  reader->SetFileName ( m_SampleName );
   reader->SetGlobalWarningDisplay( 0 );
   reader->Update();
   ImagePointer currentImage = reader->GetOutput();
