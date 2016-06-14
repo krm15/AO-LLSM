@@ -370,7 +370,7 @@ AllocateROI()
   m_ROIImage->FillBuffer( 0.0 );
 
   // Identify all the tiles that belong to this roi
-  std::cout << "Setting scan start and end values for ROI"
+  std::cout << "Setting scan start and end values for ROI" << std::endl;
   for( unsigned int k = 0; k < ImageDimension; k++ )
   {
     double beginCorner = m_ROIOrigin[k];
