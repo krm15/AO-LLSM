@@ -305,6 +305,7 @@ Read( std::istream& os )
 
   // Read the correction image
   ReadCorrectionImage();
+  std::cout << "Read correction image" << std::endl;
 
   // Read one image to get m_TileDimensions and m_TileSpacing
   ReaderPointer reader = ReaderType::New();
@@ -317,6 +318,7 @@ Read( std::istream& os )
   m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
   m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
   m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
+  std::cout << "Read tile dimensions" << std::endl;
 }
 
 
@@ -368,6 +370,7 @@ AllocateROI()
   m_ROIImage->FillBuffer( 0.0 );
 
   // Identify all the tiles that belong to this roi
+  std::cout << "Setting scan start and end values for ROI"
   for( unsigned int k = 0; k < ImageDimension; k++ )
   {
     double beginCorner = m_ROIOrigin[k];
@@ -404,10 +407,11 @@ AllocateROI()
       m_ScanStart[k] = temp;
     }
 
-    //std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
+    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
+  std::cout << "ROI filled" << std::endl;
 }
 
 
@@ -488,12 +492,11 @@ FillROI()
         currentTileOrigin[2] = m_TileCoverStart[2][k];
 
         m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
+        std::string filename = m_TileFileNameArray[i][j][k];
 
-        if ( m_ROI.IsInside( temp ) )
+        if ( m_ROI.IsInside( temp ) && ( ! filename.empty() )  )
         {
-          std::string filename = m_TileFileNameArray[i][j][k];
           //std::cout << filename.c_str() << std::endl;
-
           ReaderPointer reader = ReaderType::New();
           reader->SetFileName( filename.c_str() );
           reader->SetGlobalWarningDisplay( 0 );

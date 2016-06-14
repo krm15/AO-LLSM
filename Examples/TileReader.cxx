@@ -169,7 +169,10 @@ int main ( int argc, char* argv[] )
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
+
+  std::cout << "Allocating ROI image" << std::endl;
   settingsReader->AllocateROI();
+  std::cout << "Allocating ROI image complete" << std::endl;
 
   std::stringstream oFilename;
   oFilename << argv[3] << settingsReader->GetChannelName();
