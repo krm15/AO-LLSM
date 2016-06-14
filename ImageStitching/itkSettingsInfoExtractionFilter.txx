@@ -49,11 +49,13 @@ template < class TValueType, class TInputImage >
 SettingsInfoExtractionFilter< TValueType, TInputImage >
 ::SettingsInfoExtractionFilter()
 {
-  m_SettingName.resize( 100 );
-  m_SettingValue.resize( 100 );
+  m_SettingFieldName.resize( 100 );
+  m_SettingFieldValue.resize( 100 );
 
+  m_Blending = false;
   m_NumberOfTiles = 1;
   m_StitchedImage = ITK_NULLPTR;
+  m_CorrectionImage = ITK_NULLPTR;
 }
 
 
@@ -101,9 +103,9 @@ ReadTileInfo( std::istream& os )
 
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
-    m_NumberOfTiles *= m_SettingValue[i];
-    m_TileNumber[i] = m_SettingValue[i];
-    m_TileSize[i] = m_SettingValue[9+i];
+    m_NumberOfTiles *= m_SettingFieldValue[i];
+    m_TileNumber[i] = m_SettingFieldValue[i];
+    m_TileSize[i] = m_SettingFieldValue[9+i];
   }
 
   // Read next two lines
@@ -210,9 +212,9 @@ UpdateFileNameLookup( std::istream& os )
   std::string searchString = "nm";
 
   DirectoryPointer directory = DirectoryType::New();
-  directory->Load( m_Directory.c_str() );
+  directory->Load( m_TileDirectory.c_str() );
 
-  m_TileFileNameArray.resize( m_SettingValue[0] );
+  m_TileFileNameArray.resize( m_SettingFieldValue[0] );
 
   for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
   {
@@ -238,7 +240,7 @@ UpdateFileNameLookup( std::istream& os )
                ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
           {
             //std::cout << filename << std::endl;
-            filename2 << m_Directory << filename;
+            filename2 << m_TileDirectory << filename;
             m_TileFileNameArray[i][j][k] = filename2.str();
 
             if ( !ChannelNameSet )
@@ -277,11 +279,11 @@ Read( std::istream& os )
   for( unsigned int i = 0; i < 29; i++ )
   {
     std::getline ( nameStream, value, ',' );
-    m_SettingName[i] = value;
+    m_SettingFieldName[i] = value;
 
     //std::cout << value << ' ';
     std::getline ( valueStream, value, ',' );
-    m_SettingValue[i] = atof( value.c_str() );
+    m_SettingFieldValue[i] = atof( value.c_str() );
     //std::cout << value << std::endl;
   }
 
@@ -303,10 +305,6 @@ Read( std::istream& os )
   UpdateFileNameLookup( os );
   std::cout << "Updated file name lookup" << std::endl;
 
-  // Read the correction image
-  ReadCorrectionImage();
-  std::cout << "Read correction image" << std::endl;
-
   // Read one image to get m_TileDimensions and m_TileSpacing
   ReaderPointer reader = ReaderType::New();
   reader->SetFileName ( m_SampleName );
@@ -319,6 +317,10 @@ Read( std::istream& os )
   m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
   m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
   std::cout << "Read tile dimensions" << std::endl;
+
+  // Read the correction image
+  ReadCorrectionImage();
+  std::cout << "Read correction image" << std::endl;
 }
 
 
@@ -326,15 +328,88 @@ template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadCorrectionImage()
-{
-  //unsigned int pos = m_TileFileNameArray[0][0][0].find( searchString );
+{  
+  bool IsCorrectionImage = false;
+  std::string filename;
+  std::stringstream filename2;
+  double variance = 1.0;
+  double threshold = 30.0;
+
+  RImagePointer currentImage;
+
+  DirectoryPointer directory = DirectoryType::New();
+  directory->Load( m_CorrectionDirectory.c_str() );
+  for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
+  {
+    filename = directory->GetFile( m );
+    if ( ( ! filename.empty() ) && ( !IsCorrectionImage ) )
+    {
+      if ( filename.find( m_ChannelName ) != std::string::npos )
+      {
+        filename2 << m_CorrectionDirectory.c_str() << filename;
+
+        // Read the correction image
+        RReaderPointer reader = RReaderType::New();
+        reader->SetFileName ( filename2.str() );
+        reader->SetGlobalWarningDisplay( 0 );
+        reader->Update();
+
+        GaussianFilterPointer gaussianFilter = GaussianFilterType::New();
+        gaussianFilter->SetInput( reader->GetOutput() );
+        gaussianFilter->SetVariance( variance );
+        gaussianFilter->Update();
+
+        currentImage = gaussianFilter->GetOutput();
+        currentImage->DisconnectPipeline();
+        break;
+      }
+      filename2.str( std::string() );
+    }
+  }
+
+  RSpacingType sp;
+  sp[0] = m_TileSpacing[0];
+  sp[1] = m_TileSpacing[1];
+  currentImage->SetSpacing( sp );
+
+  RRegionType rroi;
+
+  RSizeType rsize = currentImage->GetLargestPossibleRegion().GetSize();
+
+  RIndexType rindex;
+  rindex[0] = 0.5*( rsize[0] - m_TileDimension[0] );
+  rindex[1] = 0.5*( rsize[1] - m_TileDimension[0] );
+  rroi.SetIndex( rindex );
+
+  rsize[0] = m_TileDimension[0];
+  rsize[1] = m_TileDimension[1];
+  rroi.SetSize( rsize );
+
+  ROIFilterPointer roiFilter = ROIFilterType::New();
+  roiFilter->SetRegionOfInterest( rroi );
+  roiFilter->SetInput( currentImage );
+  roiFilter->Update();
+  m_CorrectionImage = roiFilter->GetOutput();
+  m_CorrectionImage->DisconnectPipeline();
+
+  RIteratorType It( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+  It.GoToBegin();
+  while( !It.IsAtEnd() )
+  {
+    double p = It.Get();
+    if ( p < threshold )
+    {
+      It.Set( threshold );
+    }
+    ++It;
+  }
 }
 
 
 template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-CreateStitchImage()
+CreateStitchedImage()
 {
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
@@ -359,7 +434,7 @@ AllocateROI()
   if ( !m_StitchedImage )
   {
     std::cout <<  "Stitch image created" << std::endl;
-    CreateStitchImage();
+    CreateStitchedImage();
   }
 
   m_ROIImage = ImageType::New();
@@ -476,6 +551,7 @@ FillROI()
   axesOrder[1] = 0;
   axesOrder[2] = 2;
 
+  PixelType p;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
@@ -501,9 +577,28 @@ FillROI()
           reader->SetFileName( filename.c_str() );
           reader->SetGlobalWarningDisplay( 0 );
           reader->Update();
+          ImagePointer cImage = reader->GetOutput();
+          cImage->DisconnectPipeline();
+
+          IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
+          cIt.GoToBegin();
+          RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+          corrIt.GoToBegin();
+          while( !cIt.IsAtEnd() )
+          {
+            if ( corrIt.IsAtEnd() )
+            {
+              corrIt.GoToBegin();
+            }
+            //p = static_cast<PixelType>( 100*double(cIt.Get())/corrIt.Get() );
+            cIt.Set( corrIt.Get() );
+            //std::cout <<  p << ' ' << cIt.Get() << ' ' << corrIt.Get() << std::endl;
+            ++cIt;
+            ++corrIt;
+          }
 
           PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
-          pAFilter->SetInput( reader->GetOutput() );
+          pAFilter->SetInput( cImage );
           pAFilter->SetOrder( axesOrder );
           pAFilter->Update();
           ImagePointer pImage = pAFilter->GetOutput();
@@ -515,12 +610,12 @@ FillROI()
           currentImage->Allocate();
 
           IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-          IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
-          while(!pIt.IsAtEnd())
+          IteratorType currentIt( currentImage, currentImage->GetLargestPossibleRegion() );
+          while( !pIt.IsAtEnd() )
           {
-            cIt.Set( pIt.Get() );
+            currentIt.Set( pIt.Get() );
             ++pIt;
-            ++cIt;
+            ++currentIt;
           }
 
           currentImage->SetOrigin( currentTileOrigin );

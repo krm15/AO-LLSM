@@ -61,15 +61,17 @@
 #include "itkImageFileReader.h"
 #include "itkImageRegionIterator.h"
 #include "itkPermuteAxesImageFilter.h"
+#include "itkDiscreteGaussianImageFilter.h"
+#include "itkRegionOfInterestImageFilter.h"
 
 namespace itk
 {
 template < class TValueType, class TInputImage >
-class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
+class ITK_EXPORT SettingsInfoExtractionFilter : public Object
 {
   public:
   typedef SettingsInfoExtractionFilter Self;
-  typedef LightObject                  Superclass;
+  typedef Object                  Superclass;
   typedef SmartPointer< Self >         Pointer;
   typedef SmartPointer< const Self >   ConstPointer;
 
@@ -80,7 +82,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   itkNewMacro ( Self );
 
   /** Run-time type information */
-  itkTypeMacro ( SettingsInfoExtractionFilter, LightObject );
+  itkTypeMacro ( SettingsInfoExtractionFilter, Object );
 
   typedef TValueType ValueType;
 
@@ -108,29 +110,29 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   typedef typename ImageType::PointType PointType;
   typedef typename SizeType::SizeValueType SizeValueType;
 
-  typedef itk::Image< PixelType, 2 > RImageType;
+  typedef Image< double, 2 > RImageType;
   typedef typename RImageType::Pointer RImagePointer;
+  typedef ImageFileReader< RImageType > RReaderType;
+  typedef typename RReaderType::Pointer RReaderPointer;
+  typedef ImageRegionIterator< RImageType > RIteratorType;
 
+  typedef typename RImageType::SizeType RSizeType;
+  typedef typename RImageType::SpacingType RSpacingType;
+  typedef typename RImageType::IndexType RIndexType;
+  typedef typename RImageType::RegionType RRegionType;
+  typedef typename RImageType::PointType RPointType;
+
+  typedef DiscreteGaussianImageFilter< RImageType, RImageType > GaussianFilterType;
+  typedef typename GaussianFilterType::Pointer GaussianFilterPointer;
+
+  typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
+  typedef ROIFilterType::Pointer ROIFilterPointer;
 
   void Read( std::istream& os );
   void UpdateFileNameLookup( std::istream& os );
-  void CreateStitchImage();
+  void CreateStitchedImage();
   void AllocateROI();
 
-  void GetSettingFieldName( StringVectorType& name )
-  {
-    name = m_SettingName;
-  }
-
-  void GetSettingFieldValue( DoubleVectorType& name )
-  {
-    name = m_SettingValue;
-  }
-
-  unsigned int GetTotalNumberOfTiles()
-  {
-    return this->m_NumberOfTiles;
-  }
 
   unsigned int * GetTileNumber()
   {
@@ -142,100 +144,36 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
     return  m_TileSize;
   }
 
-  PointType & GetMinimumStart()
-  {
-    return m_MinimumStart;
-  }
-
-  PointType & GetMaximumEnd()
-  {
-    return m_MaximumEnd;
-  }
-
-  SizeType& GetTileDimension()
-  {
-    return m_TileDimension;
-  }
-
-  SpacingType& GetTileSpacing()
-  {
-    return m_TileSpacing;
-  }
-
-  void SetTileDirectory( std::string iDirectory )
-  {
-    m_Directory = iDirectory;
-  }
-
-  void SetCorrectionDirectory( std::string iDirectory )
-  {
-    m_CorrectionDirectory = iDirectory;
-  }
-
-  void SetChannelNumber( unsigned int iChannel )
-  {
-    m_ChannelNumber = iChannel;
-  }
-
-  void SetTimePoint( unsigned int iTp )
-  {
-    m_TimePoint = iTp;
-  }
-
   ValueType * GetStitchSize()
   {
     return  m_StitchSize;
   }
 
-  PointType & GetStitchOrigin()
-  {
-    return m_StitchOrigin;
-  }
+  itkGetObjectMacro( StitchedImage, ImageType );
+  itkGetObjectMacro( ROIImage, ImageType );
 
-  SizeType & GetStitchDimension()
-  {
-    return m_StitchDimension;
-  }
+  itkGetConstMacro( TileFileNameArray, StringArray3DType );
+  itkGetConstMacro( SettingFieldName, StringVectorType );
+  itkGetConstMacro( SettingFieldValue, DoubleVectorType );
+  itkGetConstMacro( NumberOfTiles, unsigned int );
+  itkGetConstMacro( MinimumStart, PointType );
+  itkGetConstMacro( MaximumEnd, PointType );
+  itkGetConstMacro( TileDimension, SizeType );
+  itkGetConstMacro( TileSpacing, SpacingType );
+  itkGetConstMacro( StitchOrigin, PointType );
+  itkGetConstMacro( StitchDimension, SizeType );
+  itkGetConstMacro( StitchIndex, IndexType );
+  itkGetConstMacro( StitchRegion, RegionType );
+  itkGetConstMacro( ChannelName, std::string );
 
-  IndexType & GetStitchIndex()
-  {
-    return m_StitchIndex;
-  }
+  itkSetMacro( Blending, bool );
+  itkSetMacro( ROIOrigin, PointType );
+  itkSetMacro( ROI, RegionType );
+  itkSetMacro( TileDirectory, std::string );
+  itkSetMacro( CorrectionDirectory, std::string );
+  itkSetMacro( ChannelNumber, unsigned int );
+  itkSetMacro( TimePoint, unsigned int );
 
-  RegionType & GetStitchRegion()
-  {
-    return m_StitchRegion;
-  }
-
-  ImagePointer GetStitchImage()
-  {
-    return m_StitchedImage;
-  }
-
-  ImagePointer GetROIImage()
-  {
-    return m_ROIImage;
-  }
-
-  void SetROIOrigin( PointType& iOrigin )
-  {
-    m_ROIOrigin = iOrigin;
-  }
-
-  void SetROI( RegionType& iRegion )
-  {
-    m_ROI = iRegion;
-  }
-
-  StringArray3DType& GetTileFileNameArray()
-  {
-    return m_TileFileNameArray;
-  }
-
-  std::string GetChannelName()
-  {
-    return m_ChannelName;
-  }
 
   protected:
   SettingsInfoExtractionFilter();
@@ -251,7 +189,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   void ReadCorrectionImage();
 
   std::string m_Path;
-  std::string m_Directory;
+  std::string m_TileDirectory;
   std::string m_CorrectionDirectory;
   std::string m_ChannelName;
   std::string m_SampleName;
@@ -259,8 +197,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   unsigned int m_TimePoint;
 
   unsigned int m_Dimension;
-  StringVectorType m_SettingName;
-  DoubleVectorType m_SettingValue;
+  StringVectorType m_SettingFieldName;
+  DoubleVectorType m_SettingFieldValue;
 
   unsigned int m_NumberOfTiles;
   unsigned int m_TileNumber[3];
@@ -286,10 +224,13 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   SizeType   m_StitchDimension;
   IndexType  m_StitchIndex;
   RegionType m_StitchRegion;
+  bool m_Blending;
 
   ImagePointer m_ROIImage;
   PointType m_ROIOrigin;
   RegionType m_ROI;
+
+  RImagePointer m_CorrectionImage;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

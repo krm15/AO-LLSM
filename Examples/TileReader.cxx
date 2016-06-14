@@ -103,14 +103,11 @@ int main ( int argc, char* argv[] )
   settingsReader->Read( infile );
   infile.close();
 
-  StringVectorType m_SettingName;
-  DoubleVectorType m_SettingValue;
-
-  settingsReader->GetSettingFieldName( m_SettingName );
-  settingsReader->GetSettingFieldValue( m_SettingValue );
+  StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
+  DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();
 
   // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = settingsReader->GetTotalNumberOfTiles();
+  unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
   unsigned int *tileNumber;
   tileNumber = settingsReader->GetTileNumber();
 
@@ -133,7 +130,7 @@ int main ( int argc, char* argv[] )
   std::cout << spacing << std::endl;
 
 
-  settingsReader->CreateStitchImage();
+  settingsReader->CreateStitchedImage();
 
   std::cout << std::endl;
   std::cout << "Stitched image origin" << std::endl;
@@ -148,6 +145,11 @@ int main ( int argc, char* argv[] )
   // Given zStart and zEnd, assemble an ROI
   unsigned int zStart = atoi( argv[6] );
   unsigned int zEnd = atoi( argv[7] );
+
+  if ( zEnd > settingsReader->GetStitchSize()[2] )
+  {
+    zEnd = settingsReader->GetStitchSize()[2];
+  }
 
   IndexType  roiIndex;
   roiIndex.Fill( 0 );
@@ -164,13 +166,14 @@ int main ( int argc, char* argv[] )
   tempIndex[2] = zStart;
 
   PointType  roiOrigin;
-  ImageType::Pointer m_StitchedImage = settingsReader->GetStitchImage();
+  ImageType::Pointer m_StitchedImage = settingsReader->GetStitchedImage();
   m_StitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
 
   std::cout << "Allocating ROI image" << std::endl;
+  settingsReader->SetBlending( false );
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 
