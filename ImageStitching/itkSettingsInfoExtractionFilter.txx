@@ -223,7 +223,7 @@ UpdateFileNameLookup( std::istream& os )
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t.mha";
+        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
 
         //std::cout << i << j << k << std::endl;
         for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
@@ -293,8 +293,8 @@ Read( std::istream& os )
   ImagePointer currentImage = reader->GetOutput();
   m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
-  m_TileSpacing[0] = m_TileSize[0]/m_TileDimension[0];
-  m_TileSpacing[1] = m_TileSize[1]/m_TileDimension[1];
+  m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
+  m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
   m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
 }
 
@@ -436,6 +436,12 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 FillROI()
 {
+  FixedArray<unsigned int, 3> axesOrder;
+  axesOrder[0] = 1;
+  axesOrder[1] = 0;
+  axesOrder[2] = 2;
+
+
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
@@ -461,7 +467,28 @@ FillROI()
           reader->SetFileName( filename.c_str() );
           reader->SetGlobalWarningDisplay( 0 );
           reader->Update();
-          ImagePointer currentImage = reader->GetOutput();
+
+          PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
+          pAFilter->SetInput( reader->GetOutput() );
+          pAFilter->SetOrder( axesOrder );
+          pAFilter->Update();
+          ImagePointer pImage = pAFilter->GetOutput();
+
+          ImagePointer currentImage = ImageType::New();
+          currentImage->SetOrigin( pImage->GetOrigin() );
+          currentImage->SetSpacing( pImage->GetSpacing() );
+          currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+          currentImage->Allocate();
+
+          IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+          IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+          while(!pIt.IsAtEnd())
+          {
+            cIt.Set( pIt.Get() );
+            ++pIt;
+            ++cIt;
+          }
+
           currentImage->SetOrigin( currentTileOrigin );
 
           //std::cout << "Current tile origin" << std::endl;
@@ -480,13 +507,13 @@ FillROI()
           IteratorType rIt( m_ROIImage, roiSubRegion );
           rIt.GoToBegin();
 
-          IteratorType cIt( currentImage, currentTileRegion );
-          cIt.GoToBegin();
+          IteratorType tIt( currentImage, currentTileRegion );
+          tIt.GoToBegin();
 
-          while( !cIt.IsAtEnd() )
+          while( !tIt.IsAtEnd() )
           {
-            rIt.Set( cIt.Get() );
-            ++cIt;
+            rIt.Set( tIt.Get() );
+            ++tIt;
             ++rIt;
           }
         }

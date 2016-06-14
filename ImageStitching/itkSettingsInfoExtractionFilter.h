@@ -60,7 +60,7 @@
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
 #include "itkImageRegionIterator.h"
-
+#include "itkPermuteAxesImageFilter.h"
 
 namespace itk
 {
@@ -97,6 +97,9 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   typedef ImageFileReader< ImageType > ReaderType;
   typedef typename ReaderType::Pointer ReaderPointer;
   typedef itk::ImageRegionIterator< ImageType > IteratorType;
+  typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
+  typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
+
 
   typedef typename ImageType::PixelType PixelType;
   typedef typename ImageType::SizeType SizeType;
@@ -215,6 +218,11 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   void SetROI( RegionType& iRegion )
   {
     m_ROI = iRegion;
+  }
+
+  StringArray3DType& GetTileFileNameArray()
+  {
+    return m_TileFileNameArray;
   }
 
 

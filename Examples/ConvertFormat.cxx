@@ -50,15 +50,15 @@
 #include "itkImageFileWriter.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkPermuteAxesImageFilter.h"
-#include "itkRescaleIntensityImageFilter.h"
+#include "itkSettingsInfoExtractionFilter.h"
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 6 )
+  if ( argc < 5 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir iChannelNumber ";
-    std::cerr << "iTimePoint oOutputImageDir" << std::endl;
+    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
+    std::cerr << "iChannelNumber iTimePoint" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -75,13 +75,15 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageFileReader< ImageType > ReaderType;
   typedef itk::ImageRegionIteratorWithIndex< ImageType > IteratorType;
   typedef itk::PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
-  typedef itk::RescaleIntensityImageFilter< ImageType, ImageType > RescaleFilterType;
+
+  typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
 
   typedef unsigned short OutputPixelType;
   typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
   typedef itk::CastImageFilter< ImageType, OutputImageType > CastFilterType;
   typedef itk::ImageFileWriter< OutputImageType >  WriterType;
 
+  typedef ImageType::SpacingType SpacingType;
   typedef ImageType::SizeType SizeType;
   typedef ImageType::IndexType IndexType;
   typedef ImageType::RegionType RegionType;
@@ -96,91 +98,58 @@ int main ( int argc, char* argv[] )
     return 0;
   }
 
-  std::string value, line;
+  SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
+  settingsReader->SetTileDirectory( argv[2] );
+  settingsReader->SetChannelNumber( atoi(argv[4]) );
+  settingsReader->SetTimePoint( atoi(argv[5]) );
+  settingsReader->Read( infile );
+  infile.close();
+
   StringVectorType m_SettingName;
-  m_SettingName.resize( 100 );
-
   DoubleVectorType m_SettingValue;
-  m_SettingValue.resize( 100 );
 
-  // Read first two lines
-  std::getline ( infile, line);
-  std::stringstream nameStream(line);
-
-  std::getline ( infile, line);
-  std::stringstream valueStream( line );
-
-  // First two lines is 29 fields of data
-  for( unsigned int i = 0; i < 29; i++ )
-  {
-    std::getline ( nameStream, value, ',' );
-    m_SettingName[i] = value;
-    //std::cout << value << ' ';
-    std::getline ( valueStream, value, ',' );
-    m_SettingValue[i] = atof( value.c_str() );
-    //std::cout << value << std::endl;
-  }
+  settingsReader->GetSettingFieldName( m_SettingName );
+  settingsReader->GetSettingFieldValue( m_SettingValue );
 
   // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = 1;
-  double tileNumber[3];
+  unsigned int numOfTiles = settingsReader->GetTotalNumberOfTiles();
+  unsigned int *tileNumber;
+  tileNumber = settingsReader->GetTileNumber();
 
-  for( unsigned int i = 0; i < Dimension; i++ )
-  {
-    numOfTiles *= m_SettingValue[i];
-    tileNumber[i] = m_SettingValue[i];
-  }
+  double *tileSize;
+  tileSize = settingsReader->GetTileSize();
 
-  // Read next two lines
-  StringVectorType m_TileInfoName;
-  m_TileInfoName.resize( 100 );
+  SizeType tilePixelDimension = settingsReader->GetTileDimension();
+  SpacingType spacing = settingsReader->GetTileSpacing();
 
-  std::getline ( infile, line);
-  std::stringstream tileInfoNameStream( line );
+  std::cout << "Number of tiles " << numOfTiles << std::endl;
+  std::cout << "Tile number" << std::endl;
+  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' '
+                             << tileNumber[2] << std::endl;
+  std::cout << " Tile size (um)" << std::endl;
+  std::cout << tileSize[0] << ' ' << tileSize[1] << ' '
+                           << tileSize[2] << std::endl;
+  std::cout << "Tile pixel dimension" << std::endl;
+  std::cout << tilePixelDimension << std::endl;
+  std::cout << "Tile spacing" << std::endl;
+  std::cout << spacing << std::endl;
 
-  for( unsigned int i = 0; i < 9; i++ )
-  {
-    std::getline ( tileInfoNameStream, value, ',' );
-    m_TileInfoName[i] = value;
-    //std::cout << value << std::endl;
-  }
 
-  vnlMatrixType m_TileInfoValue (numOfTiles, 9);
-  for( unsigned int i = 0; i < numOfTiles; )
-  {
-    //    std::cout << i << std::endl;
-    std::getline ( infile, line);
+  settingsReader->CreateStitchImage();
 
-    char dummy = line.c_str()[0];
-    if( ( dummy != '-' ) )
-    {
-      std::stringstream tileInfoValueStream( line );
+  std::cout << std::endl;
+  std::cout << "Stitched image origin" << std::endl;
+  std::cout << settingsReader->GetStitchOrigin() << std::endl;
+  std::cout << "Stitched image dimensions" << std::endl;
+  std::cout << settingsReader->GetStitchDimension() << std::endl;
+  std::cout << "Stitched image size" << std::endl;
+  std::cout << settingsReader->GetStitchSize()[0] << ' ';
+  std::cout << settingsReader->GetStitchSize()[1] << ' ';
+  std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
-      for( unsigned int j = 0; j < 9; j++ )
-      {
-        std::getline ( tileInfoValueStream, value, ',' );
-        m_TileInfoValue[i][j] = atof( value.c_str() );
-        //std::cout << ' ' << value;
-      }
-
-      //std::cout << std::endl;
-      i++;
-    }
-    else
-    {
-      //std::cout << std::endl;
-    }
-  }
-
-  infile.close();
 
   // Read all the files in the input directory of type ch and at timePoint
   std::string filename;
-  std::stringstream searchStringCH, searchStringXYZT;
-
-  DirectoryType::Pointer directory = DirectoryType::New();
-  directory->Load( argv[2] );
-
   itk::FixedArray<unsigned int, 3> axesOrder;
   axesOrder[0] = 1;
   axesOrder[1] = 0;
@@ -192,74 +161,51 @@ int main ( int argc, char* argv[] )
     {
       for( unsigned int k = 0; k < tileNumber[2]; k++ )
       {
-        searchStringCH << "_ch" << argv[3];
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << argv[4] << "t.tif";
+        filename = settingsReader->GetTileFileNameArray()[i][j][k];
+        std::stringstream  filename3;
 
-        //std::cout << i << j << k << std::endl;
-        for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName ( filename.c_str() );
+        reader->SetGlobalWarningDisplay( 0 );
+        reader->Update();
+
+        //PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
+        //pAFilter->SetInput( reader->GetOutput() );
+        //pAFilter->SetOrder( axesOrder );
+        //pAFilter->Update();
+        ImageType::Pointer pImage = reader->GetOutput();
+
+        ImageType::Pointer currentImage = ImageType::New();
+        currentImage->SetOrigin( pImage->GetOrigin() );
+        currentImage->SetSpacing( pImage->GetSpacing() );
+        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+        currentImage->Allocate();
+
+        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+        while(!pIt.IsAtEnd())
         {
-          filename = directory->GetFile( m );
-
-          if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
-               ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
-          {
-            //std::cout << filename << std::endl;
-            std::stringstream  filename2, filename3;
-            filename2 << argv[2] << filename;
-
-            ReaderType::Pointer reader = ReaderType::New();
-            reader->SetFileName ( filename2.str().c_str() );
-            reader->SetGlobalWarningDisplay( 0 );
-            reader->Update();
-
-            PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
-            pAFilter->SetInput( reader->GetOutput() );
-            pAFilter->SetOrder( axesOrder );
-            pAFilter->Update();
-            ImageType::Pointer pImage = pAFilter->GetOutput();
-
-            ImageType::Pointer currentImage = ImageType::New();
-            currentImage->SetOrigin( pImage->GetOrigin() );
-            currentImage->SetSpacing( pImage->GetSpacing() );
-            currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-            currentImage->Allocate();
-
-            IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-            IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
-            while(!pIt.IsAtEnd())
-            {
-              cIt.Set( pIt.Get() );
-              ++pIt;
-              ++cIt;
-            }
-
-/*
-            RescaleFilterType::Pointer rescale = RescaleFilterType::New();
-            rescale->SetInput( currentImage );
-            rescale->SetOutputMinimum( 0 );
-            rescale->SetOutputMaximum( 255 );
-            rescale->Update();
-*/
-            CastFilterType::Pointer caster = CastFilterType::New();
-            caster->SetInput( currentImage );//rescale->GetOutput()
-            caster->Update();
-
-            unsigned int lastindex = filename.find_last_of( "." );
-            std::string rawname = filename.substr( 0, lastindex );
-            filename3 << argv[5] << rawname << ".mha";
-
-            WriterType::Pointer writer = WriterType::New();
-            writer->SetFileName( filename3.str().c_str() );
-            writer->SetInput( caster->GetOutput() );
-            //writer->UseCompressionOn();
-            writer->Update();
-          }
+          cIt.Set( pIt.Get() );
+          ++pIt;
+          ++cIt;
         }
-        searchStringCH.str( std::string() );
-        searchStringXYZT.str( std::string() );
+
+        CastFilterType::Pointer caster = CastFilterType::New();
+        caster->SetInput( currentImage );//rescale->GetOutput()
+        caster->Update();
+
+        unsigned int lastindex1 = filename.find_last_of( "/" );
+        unsigned int lastindex2 = filename.find_last_of( "." );
+        std::string rawname = filename.substr( lastindex1+1, lastindex2 - lastindex1 -1 );
+        std::cout << rawname << std::endl;
+        filename3 << argv[3] << rawname << ".mha";
+        std::cout << filename3.str().c_str() << std::endl;
+
+        WriterType::Pointer writer = WriterType::New();
+        writer->SetFileName( filename3.str().c_str() );
+        writer->SetInput( caster->GetOutput() );
+        //writer->UseCompressionOn();
+        writer->Update();
       }
     }
   }
