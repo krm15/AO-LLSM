@@ -225,6 +225,11 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
     return m_TileFileNameArray;
   }
 
+  std::string m_Path;
+  std::string m_Directory;
+  std::string m_ChannelName;
+  unsigned int m_ChannelNumber;
+  unsigned int m_TimePoint;
 
   protected:
   SettingsInfoExtractionFilter();
@@ -241,11 +246,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public LightObject
   unsigned int m_Dimension;
   StringVectorType m_SettingName;
   DoubleVectorType m_SettingValue;
-
-  std::string m_Path;
-  std::string m_Directory;
-  unsigned int m_ChannelNumber;
-  unsigned int m_TimePoint;
 
   unsigned int m_NumberOfTiles;
   unsigned int m_TileNumber[3];

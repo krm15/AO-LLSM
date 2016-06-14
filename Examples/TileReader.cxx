@@ -171,8 +171,9 @@ int main ( int argc, char* argv[] )
   settingsReader->AllocateROI();
 
   std::stringstream oFilename;
-  oFilename << argv[3] << "ch" << argv[4] << "_" ;
-  oFilename << std::setfill( '0' ) << std::setw( 4 ) << argv[5];
+  oFilename << argv[3] << settingsReader->m_ChannelName;
+  oFilename << "_" << argv[4] << "ch" ;
+  oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << argv[5] << "t";
   oFilename << "_%03dz.tif";
 
   std::cout << oFilename.str().c_str() << std::endl;

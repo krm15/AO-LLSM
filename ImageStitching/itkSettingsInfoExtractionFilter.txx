@@ -285,6 +285,11 @@ Read( std::istream& os )
   // Create a lookup of filenames
   UpdateFileNameLookup( os );
 
+  //Identify the channel type
+  std::string searchString = "nm";
+  unsigned int pos = m_TileFileNameArray[0][0][0].find( searchString );
+  m_ChannelName = m_TileFileNameArray[0][0][0].substr( pos-3, 5 );
+
   // Read one image to get m_TileDimensions and m_TileSpacing
   ReaderPointer reader = ReaderType::New();
   reader->SetFileName ( m_TileFileNameArray[0][0][0] );
