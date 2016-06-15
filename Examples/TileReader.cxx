@@ -54,10 +54,10 @@
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 10 )
+  if ( argc < 9 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
+    std::cerr << argv[0] << " iSettingsDir iInputImageDir oOutputImageDir ";
     std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iBlend iCorrectionDir" << std::endl;
     return EXIT_FAILURE;
   }
@@ -87,15 +87,8 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
 
-  std::string settingsFilename = argv[1];
-  std::ifstream infile ( settingsFilename.c_str() );
-  if (!infile)
-  {
-    std::cout << "error in file opening" << std::endl;
-    return 0;
-  }
-
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
+  settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( atoi(argv[4]) );
   settingsReader->SetTimePoint( atoi(argv[5]) );
@@ -105,8 +98,7 @@ int main ( int argc, char* argv[] )
     settingsReader->SetCorrectionDirectory( argv[9] );
   }
 
-  settingsReader->Read( infile );
-  infile.close();
+  settingsReader->Read();
 
   StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
   DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();

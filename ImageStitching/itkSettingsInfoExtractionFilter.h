@@ -128,7 +128,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
   typedef ROIFilterType::Pointer ROIFilterPointer;
 
-  void Read( std::istream& os );
+  void Read();
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
   void AllocateROI();
@@ -169,6 +169,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( Blending, bool );
   itkSetMacro( ROIOrigin, PointType );
   itkSetMacro( ROI, RegionType );
+  itkSetMacro( SettingsDirectory, std::string );
   itkSetMacro( TileDirectory, std::string );
   itkSetMacro( CorrectionDirectory, std::string );
   itkSetMacro( ChannelNumber, unsigned int );
@@ -189,6 +190,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void ReadCorrectionImage();
 
   std::string m_Path;
+  std::string m_SettingsDirectory;
   std::string m_TileDirectory;
   std::string m_CorrectionDirectory;
   std::string m_ChannelName;

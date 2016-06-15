@@ -90,20 +90,12 @@ int main ( int argc, char* argv[] )
   typedef ImageType::PointType PointType;
   typedef SizeType::SizeValueType SizeValueType;
 
-  std::string settingsFilename = argv[1];
-  std::ifstream infile ( settingsFilename.c_str() );
-  if (!infile)
-  {
-    std::cout << "error in file opening" << std::endl;
-    return 0;
-  }
-
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
+  settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( atoi(argv[4]) );
   settingsReader->SetTimePoint( atoi(argv[5]) );
-  settingsReader->Read( infile );
-  infile.close();
+  settingsReader->Read();
 
   StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
   DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue(  );

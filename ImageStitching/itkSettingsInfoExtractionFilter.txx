@@ -309,8 +309,43 @@ UpdateFileNameLookup( std::istream& os )
 template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-Read( std::istream& os )
+Read()
 {
+  DirectoryPointer directory = DirectoryType::New();
+  directory->Load( m_SettingsDirectory.c_str() );
+
+  bool foundFile = false;
+  std::string filename;
+  std::stringstream filename2;
+  for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
+  {
+    filename = directory->GetFile( m );
+
+    if ( ( filename.find( "3D settings" ) != std::string::npos ) &&
+         ( filename.find( ".csv" ) != std::string::npos ) &&
+         ( !foundFile ) )
+    {
+      foundFile = true;
+      break;
+    }
+  }
+
+  if ( !foundFile )
+  {
+    std::cout << "3D settings file not found" << std::endl;
+    return;
+  }
+
+  filename2 << m_SettingsDirectory << filename;
+
+  std::ifstream os ( filename2.str().c_str() );
+
+  if ( !os )
+  {
+    std::cout << "error in file opening" << std::endl;
+    return;
+  }
+
   // Read first two lines
   std::string value, line;
   std::getline ( os, line);
@@ -365,6 +400,8 @@ Read( std::istream& os )
   // Read the correction image
   ReadCorrectionImage();
   std::cout << "Read correction image" << std::endl;
+
+  os.close();
 }
 
 
@@ -384,7 +421,7 @@ ReadCorrectionImage()
   double variance = 1.0;
   double threshold = 30.0;
 
-  RImagePointer currentImage;
+  RImagePointer currentImage = ITK_NULLPTR;
 
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( m_CorrectionDirectory.c_str() );
@@ -415,6 +452,12 @@ ReadCorrectionImage()
       filename2.str( std::string() );
     }
   }
+
+  if ( !currentImage )
+  {
+      return;
+  }
+
 
   RSpacingType sp;
   sp[0] = m_TileSpacing[0];
