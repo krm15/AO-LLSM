@@ -206,6 +206,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   SizeType m_TileDimension;
   SpacingType m_TileSpacing;
   StringArray3DType m_TileFileNameArray;
+  ValueType m_TileOverlap[3];
 
   PointType m_MinimumStart;
   PointType m_MaximumEnd;

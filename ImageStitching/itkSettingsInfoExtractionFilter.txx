@@ -56,6 +56,7 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_NumberOfTiles = 1;
   m_StitchedImage = ITK_NULLPTR;
   m_CorrectionImage = ITK_NULLPTR;
+  m_CorrectionDirectory = "";
 }
 
 
@@ -70,14 +71,38 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverEnd[i].resize( m_TileNumber[i] );
   }
 
-  for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
+  for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    for( unsigned int j = 0; j < ImageDimension; j++ )
+    for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
-      m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
-      m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
+      m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3] + 0.5*m_TileOverlap[j];
+      m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6] - 0.5*m_TileOverlap[j];
     }
+  }
+
+  // Identify first and last tile in each dimension
+  // Extend the coverage of the first and last tile by overlap
+  for( unsigned int j = 0; j < ImageDimension; j++ )
+  {
+    unsigned int firstTile, lastTile;
+    firstTile = 0;
+    lastTile = m_TileNumber[j]-1;
+
+    double start, stop;
+    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
+    {
+      if ( m_TileCoverStart[j][firstTile] > m_TileCoverStart[j][k] )
+      {
+        firstTile = k;
+      }
+      if ( m_TileCoverEnd[j][lastTile] < m_TileCoverEnd[j][k] )
+      {
+        lastTile = k;
+      }
+    }
+    m_TileCoverStart[j][firstTile] = m_MinimumStart[j];
+    m_TileCoverEnd[j][lastTile] = m_MaximumEnd[j];
   }
 }
 
@@ -106,6 +131,7 @@ ReadTileInfo( std::istream& os )
     m_NumberOfTiles *= m_SettingFieldValue[i];
     m_TileNumber[i] = m_SettingFieldValue[i];
     m_TileSize[i] = m_SettingFieldValue[9+i];
+    m_TileOverlap[i] = m_SettingFieldValue[6+i];
   }
 
   // Read next two lines
@@ -328,7 +354,12 @@ template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadCorrectionImage()
-{  
+{
+  if ( m_CorrectionDirectory.empty() )
+  {
+    return;
+  }
+
   bool IsCorrectionImage = false;
   std::string filename;
   std::stringstream filename2;
@@ -339,7 +370,7 @@ ReadCorrectionImage()
 
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( m_CorrectionDirectory.c_str() );
-  for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
+  for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
     if ( ( ! filename.empty() ) && ( !IsCorrectionImage ) )
@@ -455,8 +486,8 @@ AllocateROI()
     double scanStartVal = 100000, scanEndVal = -100000;
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
-      //std::cout << "   " << scanStartVal << ' ' << m_TileCoverStart[k][i] <<
-      //             ' ' << m_TileCoverEnd[k][i] << ' ' << scanEndVal  << std::endl;
+      //std::cout << m_TileCoverStart[k][i] << ' '
+      //          << m_TileCoverEnd[k][i] << std::endl;
       if ( ( beginCorner >= m_TileCoverStart[k][i] - 0.0001 ) &&
            ( beginCorner <= m_TileCoverEnd[k][i] + 0.0001 ) &&
            ( scanStartVal >= m_TileCoverStart[k][i] ) )
@@ -482,7 +513,7 @@ AllocateROI()
       m_ScanStart[k] = temp;
     }
 
-    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
+    //std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
@@ -572,7 +603,9 @@ FillROI()
 
         if ( m_ROI.IsInside( temp ) && ( ! filename.empty() )  )
         {
+          //std::cout << i << ' ' << j << ' ' << k << std::endl;
           //std::cout << filename.c_str() << std::endl;
+
           ReaderPointer reader = ReaderType::New();
           reader->SetFileName( filename.c_str() );
           reader->SetGlobalWarningDisplay( 0 );
@@ -580,21 +613,23 @@ FillROI()
           ImagePointer cImage = reader->GetOutput();
           cImage->DisconnectPipeline();
 
-          IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
-          cIt.GoToBegin();
-          RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
-          corrIt.GoToBegin();
-          while( !cIt.IsAtEnd() )
+          if ( m_CorrectionImage )
           {
-            if ( corrIt.IsAtEnd() )
+            IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
+            cIt.GoToBegin();
+            RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+            corrIt.GoToBegin();
+            while( !cIt.IsAtEnd() )
             {
-              corrIt.GoToBegin();
+              if ( corrIt.IsAtEnd() )
+              {
+                corrIt.GoToBegin();
+              }
+              p = static_cast<PixelType>( 100*double(cIt.Get())/corrIt.Get() );
+              cIt.Set( p );
+              ++cIt;
+              ++corrIt;
             }
-            //p = static_cast<PixelType>( 100*double(cIt.Get())/corrIt.Get() );
-            cIt.Set( corrIt.Get() );
-            //std::cout <<  p << ' ' << cIt.Get() << ' ' << corrIt.Get() << std::endl;
-            ++cIt;
-            ++corrIt;
           }
 
           PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
