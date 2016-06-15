@@ -54,11 +54,11 @@
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 9 )
+  if ( argc < 10 )
   {
     std::cerr << "Usage: " << std::endl;
     std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
-    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iCorrectionDir" << std::endl;
+    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iBlend iCorrectionDir" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -99,7 +99,12 @@ int main ( int argc, char* argv[] )
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( atoi(argv[4]) );
   settingsReader->SetTimePoint( atoi(argv[5]) );
-  settingsReader->SetCorrectionDirectory( argv[8] );
+
+  if (argc > 9)
+  {
+    settingsReader->SetCorrectionDirectory( argv[9] );
+  }
+
   settingsReader->Read( infile );
   infile.close();
 
@@ -173,7 +178,7 @@ int main ( int argc, char* argv[] )
   settingsReader->SetROI( roi );
 
   std::cout << "Allocating ROI image" << std::endl;
-  settingsReader->SetBlending( false );
+  settingsReader->SetBlending( atoi( argv[8] ) );
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 

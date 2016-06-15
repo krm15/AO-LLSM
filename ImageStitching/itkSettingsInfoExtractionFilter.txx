@@ -56,6 +56,8 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_NumberOfTiles = 1;
   m_StitchedImage = ITK_NULLPTR;
   m_CorrectionImage = ITK_NULLPTR;
+  m_ROIImage = ITK_NULLPTR;
+  m_ROIOverlapImage = ITK_NULLPTR;
   m_CorrectionDirectory = "";
 }
 
@@ -76,9 +78,24 @@ UpdateTileCoverage( std::istream& os )
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
-      m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3] + 0.5*m_TileOverlap[j];
-      m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6] - 0.5*m_TileOverlap[j];
+      if ( !m_Blending )
+      {
+        m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3]
+            + 0.5*m_TileOverlap[j];
+        m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6]
+            - 0.5*m_TileOverlap[j];
+      }
+      else
+      {
+        m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
+        m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
+      }
     }
+  }
+
+  if ( m_Blending )
+  {
+    return;
   }
 
   // Identify first and last tile in each dimension
@@ -105,6 +122,7 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverEnd[j][lastTile] = m_MaximumEnd[j];
   }
 }
+
 
 template < class TValueType, class TInputImage >
 void
@@ -475,6 +493,16 @@ AllocateROI()
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
 
+  if ( m_Blending )
+  {
+    m_ROIOverlapImage = ImageType::New();
+    m_ROIOverlapImage->SetOrigin( m_ROIOrigin );
+    m_ROIOverlapImage->SetSpacing( m_TileSpacing );
+    m_ROIOverlapImage->SetRegions( m_ROI );
+    m_ROIOverlapImage->Allocate();
+    m_ROIOverlapImage->FillBuffer( 0.0 );
+  }
+
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -643,7 +671,9 @@ FillROI()
           currentImage->SetSpacing( pImage->GetSpacing() );
           currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
           currentImage->Allocate();
+          currentImage->FillBuffer( 0 );
 
+          PixelType q;
           IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
           IteratorType currentIt( currentImage, currentImage->GetLargestPossibleRegion() );
           while( !pIt.IsAtEnd() )
@@ -668,20 +698,66 @@ FillROI()
 
 
           // Using these images, fill up roiImage
-          IteratorType rIt( m_ROIImage, roiSubRegion );
-          rIt.GoToBegin();
-
-          IteratorType tIt( currentImage, currentTileRegion );
-          tIt.GoToBegin();
-
-          while( !tIt.IsAtEnd() )
+          if ( m_Blending )
           {
-            rIt.Set( tIt.Get() );
-            ++tIt;
-            ++rIt;
+            IteratorType rIt( m_ROIImage, roiSubRegion );
+            rIt.GoToBegin();
+            IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
+            roIt.GoToBegin();
+            IteratorType tIt( currentImage, currentTileRegion );
+            tIt.GoToBegin();
+
+            PixelType p;
+            while( !tIt.IsAtEnd() )
+            {
+              p = rIt.Get();
+              rIt.Set( p + tIt.Get() );
+              roIt.Set( roIt.Get() + 1 );
+              ++tIt;
+              ++rIt;
+              ++roIt;
+            }
+          }
+          else
+          {
+            IteratorType rIt( m_ROIImage, roiSubRegion );
+            rIt.GoToBegin();
+            IteratorType tIt( currentImage, currentTileRegion );
+            tIt.GoToBegin();
+
+            PixelType p;
+            while( !tIt.IsAtEnd() )
+            {
+              rIt.Set( tIt.Get() );
+              ++tIt;
+              ++rIt;
+            }
           }
         }
       }
+    }
+  }
+
+  if ( m_Blending )
+  {
+    IteratorType rIt( m_ROIImage, m_ROI );
+    rIt.GoToBegin();
+    IteratorType roIt( m_ROIOverlapImage, m_ROI );
+    roIt.GoToBegin();
+
+    PixelType p, q;
+    while( !roIt.IsAtEnd() )
+    {
+      p = rIt.Get();
+      q = roIt.Get();
+
+      if ( q > 0.0 )
+      {
+        rIt.Set( static_cast<PixelType>( double(p)/q) );
+      }
+
+      ++rIt;
+      ++roIt;
     }
   }
 }

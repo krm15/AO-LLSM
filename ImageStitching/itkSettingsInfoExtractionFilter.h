@@ -228,6 +228,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   bool m_Blending;
 
   ImagePointer m_ROIImage;
+  ImagePointer m_ROIOverlapImage;
   PointType m_ROIOrigin;
   RegionType m_ROI;
 
