@@ -273,6 +273,8 @@ int main ( int argc, char* argv[] )
   SizeType roiSize = settingsReader->GetStitchDimension();
   roiSize[2] = zEnd - zStart + 1;
 
+  std::cout << roiSize << std::endl;
+
   RegionType roi;
   roi.SetIndex( roiIndex );
   roi.SetSize( roiSize );
@@ -287,8 +289,6 @@ int main ( int argc, char* argv[] )
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
-
-  std::cout << "Allocating ROI image" << std::endl;
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 

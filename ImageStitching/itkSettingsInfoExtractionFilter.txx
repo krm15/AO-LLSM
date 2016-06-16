@@ -529,14 +529,13 @@ AllocateROI()
     CreateStitchedImage();
   }
 
-  std::cout <<  m_ROI << std::endl;
   m_ROIImage = ImageType::New();
   m_ROIImage->SetOrigin( m_ROIOrigin );
   m_ROIImage->SetSpacing( m_TileSpacing );
   m_ROIImage->SetRegions( m_ROI );
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
-  std::cout <<  "Finished allocation..." << std::endl;
+  std::cout << "Allocated ROI image" << std::endl;
 
   if ( m_Blending )
   {
