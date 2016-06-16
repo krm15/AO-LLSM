@@ -58,7 +58,8 @@ int main ( int argc, char* argv[] )
   {
     std::cerr << "Usage: " << std::endl;
     std::cerr << argv[0] << " iSettingsDir iInputImageDir oOutputImageDir ";
-    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iBlend iCorrectionDir" << std::endl;
+    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iBlend ";
+    std::cerr << "iCorrectionDir threshold" << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -96,6 +97,8 @@ int main ( int argc, char* argv[] )
   if (argc > 9)
   {
     settingsReader->SetCorrectionDirectory( argv[9] );
+    settingsReader->SetCorrectionThreshold( atoi(argv[10]) );
+    settingsReader->SetCorrectionVariance( atoi(argv[11]) );
   }
 
   settingsReader->Read();
