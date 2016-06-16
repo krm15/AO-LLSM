@@ -584,7 +584,7 @@ AllocateROI()
       m_ScanStart[k] = temp;
     }
 
-    //std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
+    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
@@ -671,11 +671,10 @@ FillROI()
 
         m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
         std::string filename = m_TileFileNameArray[i][j][k];
-
-        if ( m_ROI.IsInside( temp ) && ( ! filename.empty() )  )
+        //std::cout << filename.c_str() << std::endl;
+        if  ( ! filename.empty() )
         {
           //std::cout << i << ' ' << j << ' ' << k << std::endl;
-          //std::cout << filename.c_str() << std::endl;
 
           ReaderPointer reader = ReaderType::New();
           reader->SetFileName( filename.c_str() );
@@ -686,6 +685,7 @@ FillROI()
 
           if ( m_CorrectionImage )
           {
+            std::cout << "Correction used" << std::endl;
             IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
             cIt.GoToBegin();
             RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
@@ -696,7 +696,8 @@ FillROI()
               {
                 corrIt.GoToBegin();
               }
-              p = static_cast<PixelType>( 100*double(cIt.Get())/corrIt.Get() );
+              p = static_cast<PixelType>( m_CorrectionThreshold );
+              p += static_cast<PixelType>( 100*double(cIt.Get() - m_CorrectionThreshold)/double(corrIt.Get()) );
               cIt.Set( p );
               ++cIt;
               ++corrIt;
@@ -743,6 +744,7 @@ FillROI()
           // Using these images, fill up roiImage
           if ( m_Blending )
           {
+            std::cout << "Blending used" << std::endl;
             IteratorType rIt( m_ROIImage, roiSubRegion );
             rIt.GoToBegin();
             IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
@@ -783,6 +785,7 @@ FillROI()
 
   if ( m_Blending )
   {
+    std::cout << "Blending normalization" << std::endl;
     IteratorType rIt( m_ROIImage, m_ROI );
     rIt.GoToBegin();
     IteratorType roIt( m_ROIOverlapImage, m_ROI );
