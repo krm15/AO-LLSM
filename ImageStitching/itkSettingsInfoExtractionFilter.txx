@@ -529,6 +529,7 @@ AllocateROI()
     CreateStitchedImage();
   }
 
+  std::cout <<  m_ROI << std::endl;
   m_ROIImage = ImageType::New();
   m_ROIImage->SetOrigin( m_ROIOrigin );
   m_ROIImage->SetSpacing( m_TileSpacing );
