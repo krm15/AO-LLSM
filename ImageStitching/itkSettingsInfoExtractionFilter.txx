@@ -535,6 +535,7 @@ AllocateROI()
   m_ROIImage->SetRegions( m_ROI );
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
+  std::cout <<  "Finished allocation..." << std::endl;
 
   if ( m_Blending )
   {
