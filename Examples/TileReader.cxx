@@ -101,7 +101,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -s   --zstart  0   (default) z start plane" );
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
   opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
-  opt->addUsage( " -t   --thresh  30  (default) correction threshold" );
+  opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( "" );
 
@@ -189,9 +189,9 @@ int main ( int argc, char* argv[] )
   {
     zEnd = atoi( opt->getValue( 'e' ) );
   }
-  if( opt->getValue( 't' ) != NULL  || opt->getValue( "thresh" ) != NULL  )
+  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "darkLevel" ) != NULL  )
   {
-    thresh = atof( opt->getValue( 't' ) );
+    thresh = atof( opt->getValue( 'd' ) );
   }
   if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
   {
