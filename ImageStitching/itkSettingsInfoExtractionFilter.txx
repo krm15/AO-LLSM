@@ -54,6 +54,8 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
 
   m_Blending = false;
   m_NumberOfTiles = 1;
+  m_CorrectionThreshold = 1200;
+  m_CorrectionVariance = 2.0;
   m_StitchedImage = ITK_NULLPTR;
   m_CorrectionImage = ITK_NULLPTR;
   m_ROIImage = ITK_NULLPTR;
@@ -418,8 +420,6 @@ ReadCorrectionImage()
   bool IsCorrectionImage = false;
   std::string filename;
   std::stringstream filename2;
-  double variance = 1.0;
-  double threshold = 30.0;
 
   RImagePointer currentImage = ITK_NULLPTR;
 
@@ -442,7 +442,7 @@ ReadCorrectionImage()
 
         GaussianFilterPointer gaussianFilter = GaussianFilterType::New();
         gaussianFilter->SetInput( reader->GetOutput() );
-        gaussianFilter->SetVariance( variance );
+        gaussianFilter->SetVariance( m_CorrectionThreshold );
         gaussianFilter->Update();
 
         currentImage = gaussianFilter->GetOutput();
@@ -489,9 +489,9 @@ ReadCorrectionImage()
   while( !It.IsAtEnd() )
   {
     double p = It.Get();
-    if ( p < threshold )
+    if ( p < m_CorrectionThreshold )
     {
-      It.Set( threshold );
+      It.Set( m_CorrectionThreshold );
     }
     ++It;
   }
