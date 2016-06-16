@@ -271,6 +271,10 @@ int main ( int argc, char* argv[] )
   roiIndex.Fill( 0 );
 
   SizeType roiSize = settingsReader->GetStitchDimension();
+
+  std::cout << roiSize << std::endl;
+  std::cout << zEnd << std::endl;
+    std::cout << zStart << std::endl;
   roiSize[2] = zEnd - zStart + 1;
 
   std::cout << roiSize << std::endl;
