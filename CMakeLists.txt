@@ -32,6 +32,9 @@ SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY
  CACHE PATH "Single output directory for building all libraries."
 )
 
+ADD_LIBRARY( Option ${AO-LLSM_SOURCE_DIR}/Options/anyoption.cxx )
+
+
 SET( DIRECTORIES
   ImageStitching
   Examples

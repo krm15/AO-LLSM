@@ -50,19 +50,10 @@
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
 #include "itkSettingsInfoExtractionFilter.h"
-
+#include "anyoption.h"
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 9 )
-  {
-    std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iSettingsDir iInputImageDir oOutputImageDir ";
-    std::cerr << "iChannelNumber iTimePoint iZStart iZEnd iBlend ";
-    std::cerr << "iCorrectionDir threshold" << std::endl;
-    return EXIT_FAILURE;
-  }
-
   const unsigned int Dimension = 3;
   typedef std::vector< std::string > StringVectorType;
   typedef std::vector< double > DoubleVectorType;
@@ -88,17 +79,146 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
 
+  /* 1. CREATE AN OBJECT */
+  AnyOption *opt = new AnyOption();
+
+  /* 2. SET PREFERENCES  */
+  //opt->noPOSIX(); /* do not check for POSIX style character options */
+  //opt->setVerbose(); /* print warnings about unknown options */
+  //opt->autoUsagePrint(true); /* print usage for bad options */
+
+  /* 3. SET THE USAGE/HELP   */
+  opt->addUsage( "" );
+  opt->addUsage( "Usage: " );
+  opt->addUsage( "" );
+  opt->addUsage( " iSettings file directory " );
+  opt->addUsage( " iTile directories " );
+  opt->addUsage( " oStitched plane directories " );
+  opt->addUsage( " -h   --help    Prints this help " );
+  opt->addUsage( " -b   --blend   Blends tiles at overlap " );
+  opt->addUsage( " -c   --channel 0   (default) channel value" );
+  opt->addUsage( " -t   --time    0   (default) timepoint" );
+  opt->addUsage( " -s   --zstart  0   (default) z start plane" );
+  opt->addUsage( " -e   --zend    100 (default) z end plane" );
+  opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
+  opt->addUsage( " -t   --thresh  30  (default) correction threshold" );
+  opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
+  opt->addUsage( "" );
+
+  /* 4. SET THE OPTION STRINGS/CHARACTERS */
+
+  /* by default all  options will be checked on the command line
+    and from option/resource file */
+
+  /* a flag (takes no argument), supporting long and short form */
+  opt->setFlag(  "help",  'h' );
+  opt->setFlag(  "blend", 'b' );
+
+  /* an option (takes an argument), supporting long and short form */
+  opt->setOption(  "channel", 'c' );
+  opt->setOption(  "time",    't' );
+  opt->setOption(  "zstart",  's' );
+  opt->setOption(  "zend",    'e' );
+  opt->setOption(  "lsMap",   'l' );
+  opt->setOption(  "thresh",  't' );
+  opt->setOption(  "var",     'v' );
+
+  /* a flag (takes no argument), supporting only short form */
+//   opt->setFlag( 'c' );
+
+  /* for options that will be checked only on the command and line not in
+  option/resource file */
+  /* a flag (takes no argument), supporting long and short form */
+//   opt->setCommandFlag(  "zip" , 'z');
+
+  /* for options that will be checked only from the option/resource file */
+  /* an option (takes an argument), supporting only long form */
+//   opt->setFileOption(  "title" );
+
+  /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
+  /* read options from a  option/resource file with ':'
+  separated options or flags, one per line */
+
+  opt->processFile( ".options" );
+  opt->processCommandArgs( argc, argv );
+
+  if( ! opt->hasOptions())
+  {
+    opt->printUsage();
+    delete opt;
+    return EXIT_FAILURE;
+  }
+
+  unsigned int ch = 0;
+  unsigned int tp = 0;
+  unsigned int zStart = 0;
+  unsigned int zEnd = 100;
+  std::string lsMap = "~/";
+  double thresh = 30.0;
+  double var = 2.0;
+
+  /* 6. GET THE VALUES */
+  if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
+  {
+    opt->printUsage();
+    delete opt;
+    return EXIT_FAILURE;
+  }
+
+  if( opt->getArgc() < 3 )
+  {
+    std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
+    opt->printUsage();
+    delete opt;
+    return EXIT_FAILURE;
+  }
+
+  if( opt->getValue( 'c' ) != NULL  || opt->getValue( "channel" ) != NULL  )
+  {
+    ch = atoi( opt->getValue( 'c' ) );
+  }
+  if( opt->getValue( 't' ) != NULL  || opt->getValue( "time" ) != NULL  )
+  {
+    tp = atoi( opt->getValue( 't' ) );
+  }
+  if( opt->getValue( 's' ) != NULL  || opt->getValue( "zstart" ) != NULL  )
+  {
+    zStart = atoi( opt->getValue( 's' ) );
+  }
+  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
+  {
+    zEnd = atoi( opt->getValue( 'e' ) );
+  }
+  if( opt->getValue( 't' ) != NULL  || opt->getValue( "thresh" ) != NULL  )
+  {
+    thresh = atof( opt->getValue( 't' ) );
+  }
+  if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
+  {
+    var = atof( opt->getValue( 'v' ) );
+  }
+
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
-  settingsReader->SetChannelNumber( atoi(argv[4]) );
-  settingsReader->SetTimePoint( atoi(argv[5]) );
+  settingsReader->SetChannelNumber( ch );
+  settingsReader->SetTimePoint( tp );
 
-  if (argc > 9)
+  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
   {
-    settingsReader->SetCorrectionDirectory( argv[9] );
-    settingsReader->SetCorrectionThreshold( atoi(argv[10]) );
-    settingsReader->SetCorrectionVariance( atoi(argv[11]) );
+    lsMap = opt->getValue( 'l' );
+    settingsReader->SetCorrectionDirectory( lsMap );
+    settingsReader->SetCorrectionThreshold( thresh );
+    settingsReader->SetCorrectionVariance( var );
+  }
+
+  if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
+  {
+    settingsReader->SetBlending( 1 );
+  }
+  else
+  {
+    settingsReader->SetBlending( 0 );
   }
 
   settingsReader->Read();
@@ -142,10 +262,6 @@ int main ( int argc, char* argv[] )
   std::cout << settingsReader->GetStitchSize()[1] << ' ';
   std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
-  // Given zStart and zEnd, assemble an ROI
-  unsigned int zStart = atoi( argv[6] );
-  unsigned int zEnd = atoi( argv[7] );
-
   if ( zEnd > settingsReader->GetStitchSize()[2] )
   {
     zEnd = settingsReader->GetStitchSize()[2];
@@ -173,14 +289,13 @@ int main ( int argc, char* argv[] )
   settingsReader->SetROI( roi );
 
   std::cout << "Allocating ROI image" << std::endl;
-  settingsReader->SetBlending( atoi( argv[8] ) );
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 
   std::stringstream oFilename;
   oFilename << argv[3] << settingsReader->GetChannelName();
-  oFilename << "_" << argv[4] << "ch" ;
-  oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << argv[5] << "t";
+  oFilename << "_" << ch << "ch" ;
+  oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
   oFilename << "_%03dz.tif";
 
   std::cout << oFilename.str().c_str() << std::endl;
