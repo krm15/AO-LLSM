@@ -262,9 +262,9 @@ int main ( int argc, char* argv[] )
   std::cout << settingsReader->GetStitchSize()[1] << ' ';
   std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
-  if ( zEnd > settingsReader->GetStitchSize()[2] )
+  if ( zEnd > settingsReader->GetStitchDimension()[2] )
   {
-    zEnd = settingsReader->GetStitchSize()[2];
+    zEnd = settingsReader->GetStitchDimension()[2];
   }
 
   IndexType  roiIndex;
@@ -272,12 +272,7 @@ int main ( int argc, char* argv[] )
 
   SizeType roiSize = settingsReader->GetStitchDimension();
 
-  std::cout << roiSize << std::endl;
-  std::cout << zEnd << std::endl;
-    std::cout << zStart << std::endl;
   roiSize[2] = zEnd - zStart + 1;
-
-  std::cout << roiSize << std::endl;
 
   RegionType roi;
   roi.SetIndex( roiIndex );
