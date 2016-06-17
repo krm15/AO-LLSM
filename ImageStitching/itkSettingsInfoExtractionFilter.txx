@@ -61,6 +61,7 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_ROIImage = ITK_NULLPTR;
   m_ROIOverlapImage = ITK_NULLPTR;
   m_CorrectionDirectory = "";
+  m_NumberOfThreads = 1;
 }
 
 

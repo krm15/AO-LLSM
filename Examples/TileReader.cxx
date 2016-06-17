@@ -100,6 +100,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -t   --time    0   (default) timepoint" );
   opt->addUsage( " -s   --zstart  0   (default) z start plane" );
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
+  opt->addUsage( " -n   --threads 1 (default) z end plane" );
   opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
   opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
@@ -122,6 +123,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "lsMap",   'l' );
   opt->setOption(  "thresh",  't' );
   opt->setOption(  "var",     'v' );
+  opt->setOption(  "threads", 'n' );
 
   /* a flag (takes no argument), supporting only short form */
 //   opt->setFlag( 'c' );
@@ -156,6 +158,7 @@ int main ( int argc, char* argv[] )
   std::string lsMap = "~/";
   double thresh = 30.0;
   double var = 2.0;
+  unsigned int numOfThreads = 1;
 
   /* 6. GET THE VALUES */
   if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
@@ -196,6 +199,10 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
   {
     var = atof( opt->getValue( 'v' ) );
+  }
+  if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
+  {
+    numOfThreads = atof( opt->getValue( 'n' ) );
   }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
@@ -267,18 +274,11 @@ int main ( int argc, char* argv[] )
     zEnd = settingsReader->GetStitchDimension()[2];
   }
 
-  if ( zStart < 0 )
-  {
-    zStart = 0;
-  }
-
-
   if ( zStart > zEnd )
   {
     std::cout << "zStart is greater than zEnd" << std::endl;
     return EXIT_SUCCESS;
   }
-
 
   IndexType  roiIndex;
   roiIndex.Fill( 0 );
@@ -301,6 +301,7 @@ int main ( int argc, char* argv[] )
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
+  settingsReader->SetNumberOfThreads( 1 );
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 

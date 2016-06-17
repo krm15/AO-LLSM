@@ -176,6 +176,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( CorrectionDirectory, std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
+  itkSetMacro( NumberOfThreads,     unsigned int );
 
 
   protected:
@@ -235,6 +236,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   ImagePointer  m_ROIOverlapImage;
   PointType     m_ROIOrigin;
   RegionType    m_ROI;
+  unsigned int  m_NumberOfThreads;
 
   RImagePointer m_CorrectionImage;
   ValueType     m_CorrectionThreshold;
