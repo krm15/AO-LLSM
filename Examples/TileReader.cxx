@@ -267,6 +267,19 @@ int main ( int argc, char* argv[] )
     zEnd = settingsReader->GetStitchDimension()[2];
   }
 
+  if ( zStart < 0 )
+  {
+    zStart = 0;
+  }
+
+
+  if ( zStart > zEnd )
+  {
+    std::cout << "zStart is greater than zEnd" << std::endl;
+    return EXIT_SUCCESS;
+  }
+
+
   IndexType  roiIndex;
   roiIndex.Fill( 0 );
 
