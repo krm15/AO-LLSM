@@ -54,11 +54,14 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
 
   m_Blending = false;
   m_NumberOfTiles = 1;
+  m_CorrectionThreshold = 1200;
+  m_CorrectionVariance = 2.0;
   m_StitchedImage = ITK_NULLPTR;
   m_CorrectionImage = ITK_NULLPTR;
   m_ROIImage = ITK_NULLPTR;
   m_ROIOverlapImage = ITK_NULLPTR;
   m_CorrectionDirectory = "";
+  m_NumberOfThreads = 1;
 }
 
 
@@ -418,8 +421,6 @@ ReadCorrectionImage()
   bool IsCorrectionImage = false;
   std::string filename;
   std::stringstream filename2;
-  double variance = 1.0;
-  double threshold = 30.0;
 
   RImagePointer currentImage = ITK_NULLPTR;
 
@@ -442,7 +443,7 @@ ReadCorrectionImage()
 
         GaussianFilterPointer gaussianFilter = GaussianFilterType::New();
         gaussianFilter->SetInput( reader->GetOutput() );
-        gaussianFilter->SetVariance( variance );
+        gaussianFilter->SetVariance( m_CorrectionThreshold );
         gaussianFilter->Update();
 
         currentImage = gaussianFilter->GetOutput();
@@ -489,9 +490,9 @@ ReadCorrectionImage()
   while( !It.IsAtEnd() )
   {
     double p = It.Get();
-    if ( p < threshold )
+    if ( p < m_CorrectionThreshold )
     {
-      It.Set( threshold );
+      It.Set( m_CorrectionThreshold );
     }
     ++It;
   }
@@ -535,6 +536,7 @@ AllocateROI()
   m_ROIImage->SetRegions( m_ROI );
   m_ROIImage->Allocate();
   m_ROIImage->FillBuffer( 0.0 );
+  std::cout << "Allocated ROI image" << std::endl;
 
   if ( m_Blending )
   {
@@ -584,7 +586,7 @@ AllocateROI()
       m_ScanStart[k] = temp;
     }
 
-    //std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
+    std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
   FillROI();
@@ -692,11 +694,10 @@ FillROI()
 
         m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
         std::string filename = m_TileFileNameArray[i][j][k];
-
-        if ( m_ROI.IsInside( temp ) && ( ! filename.empty() )  )
+        //std::cout << filename.c_str() << std::endl;
+        if  ( ! filename.empty() )
         {
           //std::cout << i << ' ' << j << ' ' << k << std::endl;
-          //std::cout << filename.c_str() << std::endl;
 
           ReaderPointer reader = ReaderType::New();
           reader->SetFileName( filename.c_str() );
@@ -707,6 +708,7 @@ FillROI()
 
           if ( m_CorrectionImage )
           {
+            std::cout << "Correction used" << std::endl;
             IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
             cIt.GoToBegin();
             RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
@@ -717,7 +719,8 @@ FillROI()
               {
                 corrIt.GoToBegin();
               }
-              p = static_cast<PixelType>( 100*double(cIt.Get())/corrIt.Get() );
+              p = static_cast<PixelType>( m_CorrectionThreshold );
+              p += static_cast<PixelType>( 100*double(cIt.Get() - m_CorrectionThreshold)/double(corrIt.Get()) );
               cIt.Set( p );
               ++cIt;
               ++corrIt;
@@ -764,6 +767,7 @@ FillROI()
           // Using these images, fill up roiImage
           if ( m_Blending )
           {
+            std::cout << "Blending used" << std::endl;
             IteratorType rIt( m_ROIImage, roiSubRegion );
             rIt.GoToBegin();
             IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
@@ -804,6 +808,7 @@ FillROI()
 
   if ( m_Blending )
   {
+    std::cout << "Blending normalization" << std::endl;
     IteratorType rIt( m_ROIImage, m_ROI );
     rIt.GoToBegin();
     IteratorType roIt( m_ROIOverlapImage, m_ROI );

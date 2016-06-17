@@ -151,30 +151,33 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   }
 
   itkGetObjectMacro( StitchedImage, ImageType );
-  itkGetObjectMacro( ROIImage, ImageType );
+  itkGetObjectMacro( ROIImage,      ImageType );
 
-  itkGetConstMacro( TileFileNameArray, StringArray3DType );
-  itkGetConstMacro( SettingFieldName, StringVectorType );
-  itkGetConstMacro( SettingFieldValue, DoubleVectorType );
-  itkGetConstMacro( NumberOfTiles, unsigned int );
-  itkGetConstMacro( MinimumStart, PointType );
-  itkGetConstMacro( MaximumEnd, PointType );
-  itkGetConstMacro( TileDimension, SizeType );
-  itkGetConstMacro( TileSpacing, SpacingType );
-  itkGetConstMacro( StitchOrigin, PointType );
-  itkGetConstMacro( StitchDimension, SizeType );
-  itkGetConstMacro( StitchIndex, IndexType );
-  itkGetConstMacro( StitchRegion, RegionType );
-  itkGetConstMacro( ChannelName, std::string );
+  itkGetConstMacro( TileFileNameArray,  StringArray3DType );
+  itkGetConstMacro( SettingFieldName,   StringVectorType );
+  itkGetConstMacro( SettingFieldValue,  DoubleVectorType );
+  itkGetConstMacro( NumberOfTiles,      unsigned int );
+  itkGetConstMacro( MinimumStart,       PointType );
+  itkGetConstMacro( MaximumEnd,         PointType );
+  itkGetConstMacro( TileDimension,      SizeType );
+  itkGetConstMacro( TileSpacing,        SpacingType );
+  itkGetConstMacro( StitchOrigin,       PointType );
+  itkGetConstMacro( StitchDimension,    SizeType );
+  itkGetConstMacro( StitchIndex,        IndexType );
+  itkGetConstMacro( StitchRegion,       RegionType );
+  itkGetConstMacro( ChannelName,        std::string );
 
-  itkSetMacro( Blending, bool );
-  itkSetMacro( ROIOrigin, PointType );
-  itkSetMacro( ROI, RegionType );
-  itkSetMacro( SettingsDirectory, std::string );
-  itkSetMacro( TileDirectory, std::string );
+  itkSetMacro( CorrectionThreshold, bool );
+  itkSetMacro( CorrectionVariance,  bool );
+  itkSetMacro( Blending,            bool );
+  itkSetMacro( ROIOrigin,           PointType );
+  itkSetMacro( ROI,                 RegionType );
+  itkSetMacro( SettingsDirectory,   std::string );
+  itkSetMacro( TileDirectory,       std::string );
   itkSetMacro( CorrectionDirectory, std::string );
-  itkSetMacro( ChannelNumber, unsigned int );
-  itkSetMacro( TimePoint, unsigned int );
+  itkSetMacro( ChannelNumber,       unsigned int );
+  itkSetMacro( TimePoint,           unsigned int );
+  itkSetMacro( NumberOfThreads,     unsigned int );
 
 
   protected:
@@ -190,52 +193,55 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
                       RegionType& rA, RegionType& rB );
   void ReadCorrectionImage();
 
-  std::string m_Path;
-  std::string m_SettingsDirectory;
-  std::string m_TileDirectory;
-  std::string m_CorrectionDirectory;
-  std::string m_ChannelName;
-  std::string m_SampleName;
-  unsigned int m_ChannelNumber;
-  unsigned int m_TimePoint;
+  std::string   m_Path;
+  std::string   m_SettingsDirectory;
+  std::string   m_TileDirectory;
+  std::string   m_CorrectionDirectory;
+  std::string   m_ChannelName;
+  std::string   m_SampleName;
+  unsigned int  m_ChannelNumber;
+  unsigned int  m_TimePoint;
 
-  unsigned int m_Dimension;
-  StringVectorType m_SettingFieldName;
-  DoubleVectorType m_SettingFieldValue;
+  unsigned int      m_Dimension;
+  StringVectorType  m_SettingFieldName;
+  DoubleVectorType  m_SettingFieldValue;
 
-  unsigned int m_NumberOfTiles;
-  unsigned int m_TileNumber[3];
-  ValueType m_TileSize[3];
-  SizeType m_TileDimension;
-  SpacingType m_TileSpacing;
+  unsigned int      m_NumberOfTiles;
+  unsigned int      m_TileNumber[3];
+  ValueType         m_TileSize[3];
+  SizeType          m_TileDimension;
+  SpacingType       m_TileSpacing;
   StringArray3DType m_TileFileNameArray;
-  ValueType m_TileOverlap[3];
+  ValueType         m_TileOverlap[3];
 
   PointType m_MinimumStart;
   PointType m_MaximumEnd;
 
-  DoubleVectorType m_TileCoverStart[3];
-  DoubleVectorType m_TileCoverEnd[3];
-  unsigned int m_ScanStart[3];
-  unsigned int m_ScanEnd[3];
+  DoubleVectorType  m_TileCoverStart[3];
+  DoubleVectorType  m_TileCoverEnd[3];
+  unsigned int      m_ScanStart[3];
+  unsigned int      m_ScanEnd[3];
 
   vnlMatrixType m_TileInfoValue;
   vnlMatrixType m_TransformedTileInfoValue;
 
-  ImagePointer m_StitchedImage;
-  double     m_StitchSize[3];
-  PointType  m_StitchOrigin;
-  SizeType   m_StitchDimension;
-  IndexType  m_StitchIndex;
-  RegionType m_StitchRegion;
-  bool m_Blending;
+  ImagePointer  m_StitchedImage;
+  double        m_StitchSize[3];
+  PointType     m_StitchOrigin;
+  SizeType      m_StitchDimension;
+  IndexType     m_StitchIndex;
+  RegionType    m_StitchRegion;
+  bool          m_Blending;
 
-  ImagePointer m_ROIImage;
-  ImagePointer m_ROIOverlapImage;
-  PointType m_ROIOrigin;
-  RegionType m_ROI;
+  ImagePointer  m_ROIImage;
+  ImagePointer  m_ROIOverlapImage;
+  PointType     m_ROIOrigin;
+  RegionType    m_ROI;
+  unsigned int  m_NumberOfThreads;
 
   RImagePointer m_CorrectionImage;
+  ValueType     m_CorrectionThreshold;
+  ValueType     m_CorrectionVariance;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented
