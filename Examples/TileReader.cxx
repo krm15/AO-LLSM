@@ -100,7 +100,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -t   --time    0   (default) timepoint" );
   opt->addUsage( " -s   --zstart  0   (default) z start plane" );
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
-  opt->addUsage( " -n   --threads 1 (default) z end plane" );
+  opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
   opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
