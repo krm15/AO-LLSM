@@ -659,6 +659,27 @@ FillROI()
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
   IndexType temp;
+  IndexVectorType indArray;
+
+  unsigned int sz = 1;
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    sz *= m_ScanEnd[0] - m_ScanStart[0] + 1;
+  }
+  indArray.resize( sz );
+
+  for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
+  {
+    for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
+    {
+      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
+      {
+
+      }
+    }
+  }
+
+
   for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
   {
     currentTileOrigin[0] = m_TileCoverStart[0][i];

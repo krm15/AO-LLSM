@@ -109,6 +109,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef typename ImageType::RegionType RegionType;
   typedef typename ImageType::PointType PointType;
   typedef typename SizeType::SizeValueType SizeValueType;
+  typedef std::vector< IndexType > IndexVectorType;
 
   typedef Image< double, 2 > RImageType;
   typedef typename RImageType::Pointer RImagePointer;
