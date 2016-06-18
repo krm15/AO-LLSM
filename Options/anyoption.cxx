@@ -128,7 +128,7 @@ AnyOption::init(int maxopt, int maxcharopt )
 	hasoptions = false;
 	autousage = false;
 
-  strcpy( long_opt_prefix , "--" );
+  std::strcpy( long_opt_prefix , "--" );
 
 	if( alloc() == false ){
 		cout << endl << "OPTIONS ERROR : Failed allocating memory" ;
@@ -273,11 +273,11 @@ AnyOption::setCommandPrefixChar( char _prefix )
 void
 AnyOption::setCommandLongPrefix( char *_prefix )
 {
-	if( strlen( _prefix ) > MAX_LONG_PREFIX_LENGTH ){
+  if( std::strlen( _prefix ) > MAX_LONG_PREFIX_LENGTH ){
 		*( _prefix + MAX_LONG_PREFIX_LENGTH ) = '\0'; 
 	}
 
-  strcpy (long_opt_prefix,  _prefix);
+  std::strcpy (long_opt_prefix,  _prefix);
 }
 
 void
@@ -652,11 +652,11 @@ char
 AnyOption::parsePOSIX( char* arg )
 {
 
-	for( unsigned int i = 0 ; i < strlen(arg) ; i++ ){ 
+  for( unsigned int i = 0 ; i < std::strlen(arg) ; i++ ){
 		char ch = arg[i] ;
 		if( matchChar(ch) ) { /* keep matching flags till an option */
 			/*if last char argv[++i] is the value */
-			if( i == strlen(arg)-1 ){ 
+      if( i == std::strlen(arg)-1 ){
 				return ch;
 			}else{/* else the rest of arg is the value */
 				i++; /* skip any '=' and ' ' */
@@ -680,10 +680,10 @@ AnyOption::parseGNU( char *arg )
 {
 	size_t split_at = 0;
 	/* if has a '=' sign get value */
-	for( size_t i = 0 ; i < strlen(arg) ; i++ ){
+  for( size_t i = 0 ; i < std::strlen(arg) ; i++ ){
 		if(arg[i] ==  equalsign ){
 			split_at = i ; /* store index */
-			i = strlen(arg); /* get out of loop */
+      i = std::strlen(arg); /* get out of loop */
 		}
 	}
 	if( split_at > 0 ){ /* it is an option value pair */
@@ -714,7 +714,7 @@ int
 AnyOption::matchOpt( char *opt )
 {
 	for( int i = 0 ; i < option_counter ; i++ ){
-		if( strcmp( options[i], opt ) == 0 ){
+    if( std::strcmp( options[i], opt ) == 0 ){
 			if( optiontype[i] ==  COMMON_OPT ||
 			    optiontype[i] ==  COMMAND_OPT )	
 			{ /* found option return index */
@@ -782,7 +782,7 @@ AnyOption::getValue( const char *option )
 		return NULL;
 
 	for( int i = 0 ; i < option_counter ; i++ ){
-		if( strcmp( options[i], option ) == 0 )
+    if( std::strcmp( options[i], option ) == 0 )
 			return values[ optionindex[i] ];
 	}
 	return NULL;
@@ -794,7 +794,7 @@ AnyOption::getFlag( const char *option )
 	if( !valueStoreOK() )
 		return false;
 	for( int i = 0 ; i < option_counter ; i++ ){
-		if( strcmp( options[i], option ) == 0 )
+    if( std::strcmp( options[i], option ) == 0 )
 			return findFlag( values[ optionindex[i] ] );
 	}
 	return false;
@@ -830,7 +830,7 @@ AnyOption::findFlag( char* val )
 	if( val == NULL )
 		return false;
 
-	if( strcmp( TRUE_FLAG , val ) == 0 )
+  if( std::strcmp( TRUE_FLAG , val ) == 0 )
 		return true;
 
 	return false;
@@ -845,9 +845,9 @@ AnyOption::setValue( const char *option , char *value )
   if( !valueStoreOK() )
     return false;
         for( int i = 0 ; i < option_counter ; i++ ){
-                if( strcmp( options[i], option ) == 0 ){
-                        values[ optionindex[i] ] = (char*) malloc((strlen(value)+1)*sizeof(char));
-                        strcpy( values[ optionindex[i] ], value );
+                if( std::strcmp( options[i], option ) == 0 ){
+                        values[ optionindex[i] ] = (char*) malloc((std::strlen(value)+1)*sizeof(char));
+                        std::strcpy( values[ optionindex[i] ], value );
       return true;
     }
         }
@@ -862,11 +862,11 @@ AnyOption::setFlagOn( const char *option )
 
   for( int i = 0 ; i < option_counter ; i++ )
   {
-    if( strcmp( options[i], option ) == 0 )
+    if( std::strcmp( options[i], option ) == 0 )
     {
       values[ optionindex[i] ] =
-        (char*) malloc((strlen(TRUE_FLAG)+1)*sizeof(char));
-      strcpy( values[ optionindex[i] ],  TRUE_FLAG );
+        (char*) malloc((std::strlen(TRUE_FLAG)+1)*sizeof(char));
+      std::strcpy( values[ optionindex[i] ],  TRUE_FLAG );
       return true;
     }
         }
@@ -880,8 +880,8 @@ AnyOption::setValue( char option , char *value )
     return false;
         for( int i = 0 ; i < optchar_counter ; i++ ){
                 if( optionchars[i] == option ){
-                        values[ optcharindex[i] ] = (char*) malloc((strlen(value)+1)*sizeof(char));
-                        strcpy( values[ optcharindex[i] ],  value );
+                        values[ optcharindex[i] ] = (char*) malloc((std::strlen(value)+1)*sizeof(char));
+                        std::strcpy( values[ optcharindex[i] ],  value );
       return true;
     }
         }
@@ -895,8 +895,8 @@ AnyOption::setFlagOn( char option )
     return false;
         for( int i = 0 ; i < optchar_counter ; i++ ){
                 if( optionchars[i] == option ){
-                        values[ optcharindex[i] ] = (char*) malloc((strlen(TRUE_FLAG)+1)*sizeof(char));
-      strcpy( values[ optcharindex[i] ] , TRUE_FLAG );
+                        values[ optcharindex[i] ] = (char*) malloc((std::strlen(TRUE_FLAG)+1)*sizeof(char));
+      std::strcpy( values[ optcharindex[i] ] , TRUE_FLAG );
       return true;
     }
         }
@@ -980,7 +980,7 @@ AnyOption::consumeFile( char *buffer )
        	char *pline = NULL ;
        	int linelength = 0;
        	bool newline = true;
-       	for( unsigned int i = 0 ; i < strlen( buffer ) ; i++ ){
+        for( unsigned int i = 0 ; i < std::strlen( buffer ) ; i++ ){
        	if( *cursor == endofline ) { /* end of line */
           	if( pline != NULL ) /* valid line */
                		processLine( pline, linelength );
@@ -1056,7 +1056,7 @@ AnyOption::chomp( char *str )
 {
         while( *str == whitespace )
                 str++;
-        char *end = str+strlen(str)-1;
+        char *end = str + std::strlen(str)-1;
         while( *end == whitespace )
                 end--;
         *(end+1) = nullterminate;
@@ -1066,7 +1066,7 @@ AnyOption::chomp( char *str )
 void
 AnyOption::valuePairs( char *type, char *value )
 {
-	if ( strlen(chomp(type)) == 1  ){ /* this is a char option */
+  if ( std::strlen(chomp(type)) == 1  ){ /* this is a char option */
 		for( int i = 0 ; i < optchar_counter ; i++ ){
 			if(  optionchars[i] == type[0]  ){ /* match */
 				if( optchartype[i] == COMMON_OPT ||
@@ -1080,7 +1080,7 @@ AnyOption::valuePairs( char *type, char *value )
 	}	
 	/* if no char options matched */
 	for( int i = 0 ; i < option_counter ; i++ ){
-		if( strcmp( options[i], type ) == 0 ){ /* match */
+    if( std::strcmp( options[i], type ) == 0 ){ /* match */
 			if( optiontype[i] == COMMON_OPT ||
 			    optiontype[i] == FILE_OPT )
 			{
@@ -1098,7 +1098,7 @@ void
 AnyOption::justValue( char *type )
 {
 
-	if ( strlen(chomp(type)) == 1  ){ /* this is a char option */
+  if ( std::strlen(chomp(type)) == 1  ){ /* this is a char option */
 		for( int i = 0 ; i < optchar_counter ; i++ ){
 			if(  optionchars[i] == type[0]  ){ /* match */
 				if( optchartype[i] == COMMON_FLAG ||
@@ -1112,7 +1112,7 @@ AnyOption::justValue( char *type )
 	}	
 	/* if no char options matched */
 	for( int i = 0 ; i < option_counter ; i++ ){
-		if( strcmp( options[i], type ) == 0 ){ /* match */
+    if( std::strcmp( options[i], type ) == 0 ){ /* match */
 			if( optiontype[i] == COMMON_FLAG ||
 			    optiontype[i] == FILE_FLAG )
 			{
