@@ -326,5 +326,7 @@ int main ( int argc, char* argv[] )
   series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
   series_writer->Update();
 
+  delete opt;
+
   return EXIT_SUCCESS;
 }
