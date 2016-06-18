@@ -63,6 +63,7 @@
 #include "itkPermuteAxesImageFilter.h"
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkRegionOfInterestImageFilter.h"
+#include "itkMultiThreader.h"
 
 namespace itk
 {
@@ -129,6 +130,9 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
   typedef ROIFilterType::Pointer ROIFilterPointer;
 
+  typedef MultiThreader ThreaderType;
+  typedef typename ThreaderType::Pointer ThreaderPointer;
+
   void Read();
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
@@ -188,10 +192,19 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
-  void FillROI();
+  void FillROI( unsigned int threadId,
+                unsigned int startP, unsigned int endP );
   void OverlapRegion( ImagePointer A, ImagePointer B,
                       RegionType& rA, RegionType& rB );
   void ReadCorrectionImage();
+
+  static ITK_THREAD_RETURN_TYPE ThreaderCallback(void * arg);
+
+  struct ThreadStruct
+  {
+    Self*                 Filter;
+  };
+
 
   std::string   m_Path;
   std::string   m_SettingsDirectory;
@@ -242,6 +255,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   RImagePointer m_CorrectionImage;
   ValueType     m_CorrectionThreshold;
   ValueType     m_CorrectionVariance;
+
+  std::vector<ReaderPointer> m_Reader;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

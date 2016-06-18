@@ -43,6 +43,8 @@
 
 #include "itkSettingsInfoExtractionFilter.h"
 
+static itk::SimpleFastMutexLock m_MutexSIEF;
+
 namespace itk
 {
 template < class TValueType, class TInputImage >
@@ -485,7 +487,8 @@ ReadCorrectionImage()
   m_CorrectionImage = roiFilter->GetOutput();
   m_CorrectionImage->DisconnectPipeline();
 
-  RIteratorType It( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+  RIteratorType It( m_CorrectionImage,
+                    m_CorrectionImage->GetLargestPossibleRegion() );
   It.GoToBegin();
   while( !It.IsAtEnd() )
   {
@@ -589,7 +592,25 @@ AllocateROI()
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
-  FillROI();
+  m_Reader.resize( m_NumberOfThreads );
+  for( unsigned int i = 0; i < m_NumberOfThreads; i++ )
+  {
+    m_Reader[i] = ReaderType::New();
+  }
+
+  ThreadStruct str;
+  str.Filter  = this;
+
+  ThreaderPointer threader = ThreaderType::New();
+  threader->SetNumberOfThreads( m_NumberOfThreads );
+  threader->SetSingleMethod( this->ThreaderCallback, &str );
+  threader->SingleMethodExecute();
+
+  for( unsigned int i = 0; i < m_NumberOfThreads; i++ )
+  {
+    m_Reader[i] = ITK_NULLPTR;
+  }
+  m_Reader.clear();
   std::cout << "ROI filled" << std::endl;
 }
 
@@ -646,9 +667,75 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
 
 
 template < class TValueType, class TInputImage >
+ITK_THREAD_RETURN_TYPE
+SettingsInfoExtractionFilter< TValueType, TInputImage >::
+ThreaderCallback(void * arg)
+{
+  unsigned int ThreadId = ((MultiThreader::ThreadInfoStruct *)(arg))->ThreadID;
+  ThreadId++;
+
+  ThreadStruct * str =
+  (ThreadStruct *) (((MultiThreader::ThreadInfoStruct *)(arg))->UserData);
+
+  unsigned int sz = 1;
+  sz *= ( str->Filter->m_ScanEnd[0] - str->Filter->m_ScanStart[0] + 1 );
+  sz *= ( str->Filter->m_ScanEnd[1] - str->Filter->m_ScanStart[1] + 1 );
+  sz *= ( str->Filter->m_ScanEnd[2] - str->Filter->m_ScanStart[2] + 1 );
+  sz--;
+
+  //m_MutexSIEF.Lock();
+  //std::cout << "Starting thread ID = " << ThreadId << std::endl;
+  //m_MutexSIEF.Unlock();
+
+  unsigned int numOfThreads = str->Filter->m_NumberOfThreads;
+
+  if ( (sz+1) < numOfThreads )
+  {
+    numOfThreads = sz+1;
+    if ( ThreadId > sz+1 )
+    {
+      //m_MutexSIEF.Lock();
+      //std::cout << "Ending null thread ID = " << ThreadId << std::endl;
+      //m_MutexSIEF.Unlock();
+
+      return ITK_THREAD_RETURN_VALUE;
+    }
+  }
+
+  unsigned int tileChunk = static_cast< unsigned int >( (sz+1)/numOfThreads);
+  unsigned int rem = (sz+1)%numOfThreads;
+
+  unsigned int startP, endP;
+  if ( ThreadId <= rem )
+  {
+    startP = (ThreadId-1) * (tileChunk+1);
+    endP = ThreadId * (tileChunk+1) - 1;
+  }
+  else
+  {
+    startP = (ThreadId-1) * (tileChunk) + rem;
+    endP = ThreadId * tileChunk - 1 + rem;
+  }
+
+  m_MutexSIEF.Lock();
+  std::cout << "Starting thread ID = " <<
+               ThreadId << ' ' << startP << ' ' << endP << std::endl;
+  m_MutexSIEF.Unlock();
+
+  str->Filter->FillROI( ThreadId - 1, startP, endP);
+
+  m_MutexSIEF.Lock();
+  std::cout << "Ending thread ID = " << ThreadId << std::endl;
+  m_MutexSIEF.Unlock();
+
+  return ITK_THREAD_RETURN_VALUE;
+}
+
+
+template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-FillROI()
+FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
 {
   FixedArray<unsigned int, 3> axesOrder;
   axesOrder[0] = 1;
@@ -657,150 +744,125 @@ FillROI()
 
   PixelType p;
 
+  unsigned int  sz2, sz1, sz0;
+  sz0 = ( m_ScanEnd[0] - m_ScanStart[0] + 1 );
+  sz1 = ( m_ScanEnd[1] - m_ScanStart[1] + 1 );
+  sz2 = ( m_ScanEnd[2] - m_ScanStart[2] + 1 );
+
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
   IndexType temp;
-  IndexVectorType indArray;
 
-  unsigned int sz = 1;
-  for( unsigned int i = 0; i < ImageDimension; i++ )
+  unsigned int i, j, k, quotient;
+  for( unsigned int sz = startP; sz <= endP; sz++ )
   {
-    sz *= m_ScanEnd[0] - m_ScanStart[0] + 1;
-  }
-  indArray.resize( sz );
+    k = m_ScanStart[2] + ( sz ) % ( sz2 );
+    quotient = static_cast<unsigned int>(sz/sz2);
+    j = m_ScanStart[1] + ( quotient ) % ( sz1 );
+    i = m_ScanStart[0] + static_cast<unsigned int>(quotient/sz1);
+    //std::cout << i << ' ' << j << ' ' << k << std::endl;
 
-  for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
-  {
-    for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
-    {
-      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
-      {
-
-      }
-    }
-  }
-
-
-  for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
-  {
     currentTileOrigin[0] = m_TileCoverStart[0][i];
-    for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
+    currentTileOrigin[1] = m_TileCoverStart[1][j];
+    currentTileOrigin[2] = m_TileCoverStart[2][k];
+
+    m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
+    std::string filename = m_TileFileNameArray[i][j][k];
+    //std::cout << filename.c_str() << std::endl;
+    if  ( ! filename.empty() )
     {
-      currentTileOrigin[1] = m_TileCoverStart[1][j];
-      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
+      //std::cout << i << ' ' << j << ' ' << k << std::endl;
+      m_Reader[threadId]->SetFileName( filename.c_str() );
+      m_Reader[threadId]->Update();
+
+      ImagePointer cImage = m_Reader[threadId]->GetOutput();
+      cImage->DisconnectPipeline();
+
+      if ( m_CorrectionImage )
       {
-        currentTileOrigin[2] = m_TileCoverStart[2][k];
-
-        m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
-        std::string filename = m_TileFileNameArray[i][j][k];
-        //std::cout << filename.c_str() << std::endl;
-        if  ( ! filename.empty() )
+        std::cout << "Correction used" << std::endl;
+        IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
+        cIt.GoToBegin();
+        RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+        corrIt.GoToBegin();
+        while( !cIt.IsAtEnd() )
         {
-          //std::cout << i << ' ' << j << ' ' << k << std::endl;
-
-          ReaderPointer reader = ReaderType::New();
-          reader->SetFileName( filename.c_str() );
-          reader->SetGlobalWarningDisplay( 0 );
-          reader->Update();
-          ImagePointer cImage = reader->GetOutput();
-          cImage->DisconnectPipeline();
-
-          if ( m_CorrectionImage )
+          if ( corrIt.IsAtEnd() )
           {
-            std::cout << "Correction used" << std::endl;
-            IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
-            cIt.GoToBegin();
-            RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
             corrIt.GoToBegin();
-            while( !cIt.IsAtEnd() )
-            {
-              if ( corrIt.IsAtEnd() )
-              {
-                corrIt.GoToBegin();
-              }
-              p = static_cast<PixelType>( m_CorrectionThreshold );
-              p += static_cast<PixelType>( 100*double(cIt.Get() - m_CorrectionThreshold)/double(corrIt.Get()) );
-              cIt.Set( p );
-              ++cIt;
-              ++corrIt;
-            }
           }
+          p = static_cast<PixelType>( m_CorrectionThreshold );
+          p += static_cast<PixelType>( 100*double(cIt.Get() - m_CorrectionThreshold)/double(corrIt.Get()) );
+          cIt.Set( p );
+          ++cIt;
+          ++corrIt;
+        }
+      }
 
-          PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
-          pAFilter->SetInput( cImage );
-          pAFilter->SetOrder( axesOrder );
-          pAFilter->Update();
-          ImagePointer pImage = pAFilter->GetOutput();
+      PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
+      pAFilter->SetInput( cImage );
+      pAFilter->SetOrder( axesOrder );
+      pAFilter->Update();
+      ImagePointer pImage = pAFilter->GetOutput();
 
-          ImagePointer currentImage = ImageType::New();
-          currentImage->SetOrigin( pImage->GetOrigin() );
-          currentImage->SetSpacing( pImage->GetSpacing() );
-          currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-          currentImage->Allocate();
-          currentImage->FillBuffer( 0 );
+      ImagePointer currentImage = ImageType::New();
+      currentImage->SetOrigin( pImage->GetOrigin() );
+      currentImage->SetSpacing( pImage->GetSpacing() );
+      currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+      currentImage->Allocate();
+      currentImage->FillBuffer( 0 );
 
-          PixelType q;
-          IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-          IteratorType currentIt( currentImage, currentImage->GetLargestPossibleRegion() );
-          while( !pIt.IsAtEnd() )
-          {
-            currentIt.Set( pIt.Get() );
-            ++pIt;
-            ++currentIt;
-          }
+      PixelType q;
+      IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+      IteratorType currentIt( currentImage,
+                              currentImage->GetLargestPossibleRegion() );
+      while( !pIt.IsAtEnd() )
+      {
+        currentIt.Set( pIt.Get() );
+        ++pIt;
+        ++currentIt;
+      }
 
-          currentImage->SetOrigin( currentTileOrigin );
+      currentImage->SetOrigin( currentTileOrigin );
+      OverlapRegion( currentImage, m_ROIImage,
+                     currentTileRegion, roiSubRegion );
 
-          //std::cout << "Current tile origin" << std::endl;
-          //std::cout << currentTileOrigin << std::endl;
+      // Using these images, fill up roiImage
+      if ( m_Blending )
+      {
+        std::cout << "Blending used" << std::endl;
+        IteratorType rIt( m_ROIImage, roiSubRegion );
+        rIt.GoToBegin();
+        IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
+        roIt.GoToBegin();
+        IteratorType tIt( currentImage, currentTileRegion );
+        tIt.GoToBegin();
 
-          OverlapRegion( currentImage, m_ROIImage, currentTileRegion, roiSubRegion );
+        PixelType p;
+        while( !tIt.IsAtEnd() )
+        {
+          p = rIt.Get();
+          rIt.Set( p + tIt.Get() );
+          roIt.Set( roIt.Get() + 1 );
+          ++tIt;
+          ++rIt;
+          ++roIt;
+        }
+      }
+      else
+      {
+        IteratorType rIt( m_ROIImage, roiSubRegion );
+        rIt.GoToBegin();
+        IteratorType tIt( currentImage, currentTileRegion );
+        tIt.GoToBegin();
 
-          //std::cout << "Current tile region" << std::endl;
-          //std::cout << currentTileRegion << std::endl;
-
-          //std::cout << "ROI region" << std::endl;
-          //std::cout << roiSubRegion << std::endl;
-
-
-          // Using these images, fill up roiImage
-          if ( m_Blending )
-          {
-            std::cout << "Blending used" << std::endl;
-            IteratorType rIt( m_ROIImage, roiSubRegion );
-            rIt.GoToBegin();
-            IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
-            roIt.GoToBegin();
-            IteratorType tIt( currentImage, currentTileRegion );
-            tIt.GoToBegin();
-
-            PixelType p;
-            while( !tIt.IsAtEnd() )
-            {
-              p = rIt.Get();
-              rIt.Set( p + tIt.Get() );
-              roIt.Set( roIt.Get() + 1 );
-              ++tIt;
-              ++rIt;
-              ++roIt;
-            }
-          }
-          else
-          {
-            IteratorType rIt( m_ROIImage, roiSubRegion );
-            rIt.GoToBegin();
-            IteratorType tIt( currentImage, currentTileRegion );
-            tIt.GoToBegin();
-
-            PixelType p;
-            while( !tIt.IsAtEnd() )
-            {
-              rIt.Set( tIt.Get() );
-              ++tIt;
-              ++rIt;
-            }
-          }
+        PixelType p;
+        while( !tIt.IsAtEnd() )
+        {
+          rIt.Set( tIt.Get() );
+          ++tIt;
+          ++rIt;
         }
       }
     }
@@ -830,6 +892,8 @@ FillROI()
     }
   }
 }
+
+
 
 } /* end namespace itk */
 

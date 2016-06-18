@@ -301,7 +301,7 @@ int main ( int argc, char* argv[] )
 
   settingsReader->SetROIOrigin( roiOrigin );
   settingsReader->SetROI( roi );
-  settingsReader->SetNumberOfThreads( 1 );
+  settingsReader->SetNumberOfThreads( numOfThreads );
   settingsReader->AllocateROI();
   std::cout << "Allocating ROI image complete" << std::endl;
 
@@ -327,4 +327,4 @@ int main ( int argc, char* argv[] )
   series_writer->Update();
 
   return EXIT_SUCCESS;
-  }
+}
