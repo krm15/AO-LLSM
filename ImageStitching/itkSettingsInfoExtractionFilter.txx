@@ -784,7 +784,8 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
         std::cout << "Correction used" << std::endl;
         IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
         cIt.GoToBegin();
-        RIteratorType corrIt( m_CorrectionImage, m_CorrectionImage->GetLargestPossibleRegion() );
+        RIteratorType corrIt( m_CorrectionImage,
+                              m_CorrectionImage->GetLargestPossibleRegion() );
         corrIt.GoToBegin();
         while( !cIt.IsAtEnd() )
         {
