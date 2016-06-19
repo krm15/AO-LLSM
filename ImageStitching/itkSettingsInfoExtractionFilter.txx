@@ -441,17 +441,20 @@ Read()
   std::cout << "Updated file name lookup" << std::endl;
 
   // Read one image to get m_TileDimensions and m_TileSpacing
+  {
   ReaderPointer reader = ReaderType::New();
   reader->SetFileName ( m_SampleName );
   reader->SetGlobalWarningDisplay( 0 );
   reader->Update();
   ImagePointer currentImage = reader->GetOutput();
+  currentImage->DisconnectPipeline();
   m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
   m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
   m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
   m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
   std::cout << "Read tile dimensions" << std::endl;
+  }
 
   // Read the correction image
   ReadCorrectionImage();
