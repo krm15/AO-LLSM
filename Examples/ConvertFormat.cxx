@@ -57,7 +57,7 @@ int main ( int argc, char* argv[] )
   if ( argc < 5 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsFile iInputImageDir oOutputImageDir ";
+    std::cerr << argv[0] << " iInputSettingsDir iInputImageDir oOutputImageDir ";
     std::cerr << "iChannelNumber iTimePoint" << std::endl;
     return EXIT_FAILURE;
   }

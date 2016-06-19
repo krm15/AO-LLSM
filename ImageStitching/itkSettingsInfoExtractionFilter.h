@@ -65,6 +65,10 @@
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkMultiThreader.h"
 
+#include "itkRescaleIntensityImageFilter.h"
+#include "itkCastImageFilter.h"
+#include "itkImageFileWriter.h"
+
 namespace itk
 {
 template < class TValueType, class TInputImage >
@@ -130,6 +134,15 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
   typedef ROIFilterType::Pointer ROIFilterPointer;
 
+
+  typedef Image< PixelType, 2 > OutputImageType;
+  typedef RescaleIntensityImageFilter< RImageType, RImageType > RescaleFilterType;
+  typedef typename RescaleFilterType::Pointer RescaleFilterPointer;
+  typedef CastImageFilter< RImageType, OutputImageType > CastFilterType;
+  typedef typename CastFilterType::Pointer CastFilterPointer;
+  typedef ImageFileWriter< OutputImageType > WriterType;
+  typedef typename WriterType::Pointer WriterPointer;
+
   typedef MultiThreader ThreaderType;
   typedef typename ThreaderType::Pointer ThreaderPointer;
 
@@ -171,8 +184,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkGetConstMacro( StitchRegion,       RegionType );
   itkGetConstMacro( ChannelName,        std::string );
 
-  itkSetMacro( CorrectionThreshold, bool );
-  itkSetMacro( CorrectionVariance,  bool );
+  itkSetMacro( CorrectionThreshold, ValueType );
+  itkSetMacro( CorrectionVariance,  ValueType );
   itkSetMacro( Blending,            bool );
   itkSetMacro( ROIOrigin,           PointType );
   itkSetMacro( ROI,                 RegionType );

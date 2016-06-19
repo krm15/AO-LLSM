@@ -80,7 +80,7 @@ int main ( int argc, char* argv[] )
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
 
   /* 1. CREATE AN OBJECT */
-  AnyOption *opt = new AnyOption();
+//  AnyOption *opt = new AnyOption();
 
   /* 2. SET PREFERENCES  */
   //opt->noPOSIX(); /* do not check for POSIX style character options */
@@ -88,23 +88,23 @@ int main ( int argc, char* argv[] )
   //opt->autoUsagePrint(true); /* print usage for bad options */
 
   /* 3. SET THE USAGE/HELP   */
-  opt->addUsage( "" );
-  opt->addUsage( "Usage: " );
-  opt->addUsage( "" );
-  opt->addUsage( " iSettings file directory " );
-  opt->addUsage( " iTile directories " );
-  opt->addUsage( " oStitched plane directories " );
-  opt->addUsage( " -h   --help    Prints this help " );
-  opt->addUsage( " -b   --blend   Blends tiles at overlap " );
-  opt->addUsage( " -c   --channel 0   (default) channel value" );
-  opt->addUsage( " -t   --time    0   (default) timepoint" );
-  opt->addUsage( " -s   --zstart  0   (default) z start plane" );
-  opt->addUsage( " -e   --zend    100 (default) z end plane" );
-  opt->addUsage( " -n   --threads 1   (default) number of threads" );
-  opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
-  opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
-  opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
-  opt->addUsage( "" );
+//  opt->addUsage( "" );
+//  opt->addUsage( "Usage: " );
+//  opt->addUsage( "" );
+//  opt->addUsage( " iSettings file directory " );
+//  opt->addUsage( " iTile directories " );
+//  opt->addUsage( " oStitched plane directories " );
+//  opt->addUsage( " -h   --help    Prints this help " );
+//  opt->addUsage( " -b   --blend   Blends tiles at overlap " );
+//  opt->addUsage( " -c   --channel 0   (default) channel value" );
+//  opt->addUsage( " -t   --time    0   (default) timepoint" );
+//  opt->addUsage( " -s   --zstart  0   (default) z start plane" );
+//  opt->addUsage( " -e   --zend    100 (default) z end plane" );
+//  opt->addUsage( " -n   --threads 1   (default) number of threads" );
+//  opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
+//  opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
+//  opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
+//  opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
 
@@ -112,18 +112,18 @@ int main ( int argc, char* argv[] )
     and from option/resource file */
 
   /* a flag (takes no argument), supporting long and short form */
-  opt->setFlag(  "help",  'h' );
-  opt->setFlag(  "blend", 'b' );
+//  opt->setFlag(  "help",  'h' );
+//  opt->setFlag(  "blend", 'b' );
 
   /* an option (takes an argument), supporting long and short form */
-  opt->setOption(  "channel", 'c' );
-  opt->setOption(  "time",    't' );
-  opt->setOption(  "zstart",  's' );
-  opt->setOption(  "zend",    'e' );
-  opt->setOption(  "lsMap",   'l' );
-  opt->setOption(  "thresh",  't' );
-  opt->setOption(  "var",     'v' );
-  opt->setOption(  "threads", 'n' );
+//  opt->setOption(  "channel", 'c' );
+//  opt->setOption(  "time",    't' );
+//  opt->setOption(  "zstart",  's' );
+//  opt->setOption(  "zend",    'e' );
+//  opt->setOption(  "lsMap",   'l' );
+//  opt->setOption(  "thresh",  't' );
+//  opt->setOption(  "var",     'v' );
+//  opt->setOption(  "threads", 'n' );
 
   /* a flag (takes no argument), supporting only short form */
 //   opt->setFlag( 'c' );
@@ -141,69 +141,69 @@ int main ( int argc, char* argv[] )
   /* read options from a  option/resource file with ':'
   separated options or flags, one per line */
 
-  opt->processFile( ".options" );
-  opt->processCommandArgs( argc, argv );
+//  opt->processFile( ".options" );
+//  opt->processCommandArgs( argc, argv );
 
-  if( ! opt->hasOptions())
-  {
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
+//  if( ! opt->hasOptions())
+//  {
+//    opt->printUsage();
+//    delete opt;
+//    return EXIT_FAILURE;
+//  }
 
   unsigned int ch = 0;
   unsigned int tp = 0;
   unsigned int zStart = 0;
-  unsigned int zEnd = 100;
-  std::string lsMap = "~/";
-  double thresh = 30.0;
-  double var = 2.0;
+  unsigned int zEnd = 10;
+  std::string lsMap = "/Users/kishoremosaliganti/Dropbox/DataForKishore/LS_measurement/";
+  double thresh = 104.0;
+  double var = 100.0;
   unsigned int numOfThreads = 1;
 
   /* 6. GET THE VALUES */
-  if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
-  {
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
+//  if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
+//  {
+//    opt->printUsage();
+//    delete opt;
+//    return EXIT_FAILURE;
+//  }
 
-  if( opt->getArgc() < 3 )
-  {
-    std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
+//  if( opt->getArgc() < 3 )
+//  {
+//    std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
+//    opt->printUsage();
+//    delete opt;
+//    return EXIT_FAILURE;
+//  }
 
-  if( opt->getValue( 'c' ) != NULL  || opt->getValue( "channel" ) != NULL  )
-  {
-    ch = atoi( opt->getValue( 'c' ) );
-  }
-  if( opt->getValue( 't' ) != NULL  || opt->getValue( "time" ) != NULL  )
-  {
-    tp = atoi( opt->getValue( 't' ) );
-  }
-  if( opt->getValue( 's' ) != NULL  || opt->getValue( "zstart" ) != NULL  )
-  {
-    zStart = atoi( opt->getValue( 's' ) );
-  }
-  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
-  {
-    zEnd = atoi( opt->getValue( 'e' ) );
-  }
-  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "darkLevel" ) != NULL  )
-  {
-    thresh = atof( opt->getValue( 'd' ) );
-  }
-  if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
-  {
-    var = atof( opt->getValue( 'v' ) );
-  }
-  if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
-  {
-    numOfThreads = atof( opt->getValue( 'n' ) );
-  }
+//  if( opt->getValue( 'c' ) != NULL  || opt->getValue( "channel" ) != NULL  )
+//  {
+//    ch = atoi( opt->getValue( 'c' ) );
+//  }
+//  if( opt->getValue( 't' ) != NULL  || opt->getValue( "time" ) != NULL  )
+//  {
+//    tp = atoi( opt->getValue( 't' ) );
+//  }
+//  if( opt->getValue( 's' ) != NULL  || opt->getValue( "zstart" ) != NULL  )
+//  {
+//    zStart = atoi( opt->getValue( 's' ) );
+//  }
+//  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
+//  {
+//    zEnd = atoi( opt->getValue( 'e' ) );
+//  }
+//  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "darkLevel" ) != NULL  )
+//  {
+//    thresh = atof( opt->getValue( 'd' ) );
+//  }
+//  if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
+//  {
+//    var = atof( opt->getValue( 'v' ) );
+//  }
+//  if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
+//  {
+//    numOfThreads = atof( opt->getValue( 'n' ) );
+//  }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
@@ -211,22 +211,22 @@ int main ( int argc, char* argv[] )
   settingsReader->SetChannelNumber( ch );
   settingsReader->SetTimePoint( tp );
 
-  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
-  {
-    lsMap = opt->getValue( 'l' );
+//  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
+//  {
+//    lsMap = opt->getValue( 'l' );
     settingsReader->SetCorrectionDirectory( lsMap );
     settingsReader->SetCorrectionThreshold( thresh );
     settingsReader->SetCorrectionVariance( var );
-  }
+//  }
 
-  if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
-  {
-    settingsReader->SetBlending( 1 );
-  }
-  else
-  {
+//  if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
+//  {
+//    settingsReader->SetBlending( 1 );
+//  }
+//  else
+//  {
     settingsReader->SetBlending( 0 );
-  }
+//  }
 
   settingsReader->Read();
 
@@ -326,7 +326,7 @@ int main ( int argc, char* argv[] )
   series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
   series_writer->Update();
 
-  delete opt;
+  //delete opt;
 
   return EXIT_SUCCESS;
 }

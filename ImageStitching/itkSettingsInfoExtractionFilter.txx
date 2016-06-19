@@ -69,6 +69,57 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
 
 template < class TValueType, class TInputImage >
 void
+SettingsInfoExtractionFilter< TValueType, TInputImage >
+::OverlapRegion( ImagePointer A, ImagePointer B,
+  RegionType& rA, RegionType& rB )
+{
+  SizeType sizeA, sizeB, s;
+  sizeA = A->GetLargestPossibleRegion().GetSize();
+  sizeB = B->GetLargestPossibleRegion().GetSize();
+
+  IndexType sIndexA, sIndexB;
+  IndexType tIndexA, tIndexB;
+
+  A->TransformPhysicalPointToIndex( B->GetOrigin(), tIndexA );
+  B->TransformPhysicalPointToIndex( A->GetOrigin(), tIndexB );
+
+  PointType originA = A->GetOrigin();
+  PointType originB = B->GetOrigin();
+
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    if ( originA[i] > originB[i] )
+    {
+      sIndexA[i] = 0;
+      sIndexB[i] = tIndexB[i];
+      s[i] = sizeA[i];
+      if ( s[i] > static_cast< SizeValueType >( sizeB[i] - sIndexB[i] - 1 ) )
+      {
+        s[i] = sizeB[i] - sIndexB[i];
+      }
+    }
+    else
+    {
+      sIndexB[i] = 0;
+      sIndexA[i] = tIndexA[i];
+      s[i] = sizeB[i];
+      if ( s[i] > static_cast< SizeValueType >(
+        sizeA[i] - sIndexA[i] - 1 ) )
+      {
+        s[i] = sizeA[i] - sIndexA[i];
+      }
+    }
+  }
+
+  rA.SetIndex( sIndexA );
+  rA.SetSize( s );
+  rB.SetIndex( sIndexB );
+  rB.SetSize( s );
+}
+
+
+template < class TValueType, class TInputImage >
+void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 UpdateTileCoverage( std::istream& os )
 {
@@ -431,6 +482,7 @@ ReadCorrectionImage()
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
+
     if ( ( ! filename.empty() ) && ( !IsCorrectionImage ) )
     {
       if ( filename.find( m_ChannelName ) != std::string::npos )
@@ -440,12 +492,12 @@ ReadCorrectionImage()
         // Read the correction image
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename2.str() );
-        reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
 
         GaussianFilterPointer gaussianFilter = GaussianFilterType::New();
         gaussianFilter->SetInput( reader->GetOutput() );
-        gaussianFilter->SetVariance( m_CorrectionThreshold );
+        gaussianFilter->SetVariance( m_CorrectionVariance );
+        gaussianFilter->SetUseImageSpacingOn();
         gaussianFilter->Update();
 
         currentImage = gaussianFilter->GetOutput();
@@ -461,7 +513,6 @@ ReadCorrectionImage()
       return;
   }
 
-
   RSpacingType sp;
   sp[0] = m_TileSpacing[0];
   sp[1] = m_TileSpacing[1];
@@ -471,34 +522,64 @@ ReadCorrectionImage()
 
   RSizeType rsize = currentImage->GetLargestPossibleRegion().GetSize();
 
+  //std::cout << rsize << std::endl;
+  //std::cout << m_TileDimension << std::endl;
+
   RIndexType rindex;
   rindex[0] = 0.5*( rsize[0] - m_TileDimension[0] );
-  rindex[1] = 0.5*( rsize[1] - m_TileDimension[0] );
+  rindex[1] = 0.5*( rsize[1] - m_TileDimension[1] );
   rroi.SetIndex( rindex );
+
+  //std::cout << rindex << std::endl;
 
   rsize[0] = m_TileDimension[0];
   rsize[1] = m_TileDimension[1];
   rroi.SetSize( rsize );
 
+  //std::cout << rsize << std::endl;
+
   ROIFilterPointer roiFilter = ROIFilterType::New();
   roiFilter->SetRegionOfInterest( rroi );
   roiFilter->SetInput( currentImage );
   roiFilter->Update();
-  m_CorrectionImage = roiFilter->GetOutput();
-  m_CorrectionImage->DisconnectPipeline();
+  RImagePointer tempImage = roiFilter->GetOutput();
+  tempImage->DisconnectPipeline();
 
-  RIteratorType It( m_CorrectionImage,
-                    m_CorrectionImage->GetLargestPossibleRegion() );
+  RIteratorType It( tempImage, tempImage->GetLargestPossibleRegion() );
   It.GoToBegin();
   while( !It.IsAtEnd() )
   {
     double p = It.Get();
     if ( p < m_CorrectionThreshold )
     {
-      It.Set( m_CorrectionThreshold );
+      It.Set( 0 );
+    }
+    else
+    {
+      It.Set( p - m_CorrectionThreshold );
     }
     ++It;
   }
+
+  RescaleFilterPointer rescale = RescaleFilterType::New();
+  rescale->SetInput( tempImage );
+  rescale->SetOutputMinimum( 0.0 );
+  rescale->SetOutputMaximum( 1.0 );
+  rescale->Update();
+
+  m_CorrectionImage = rescale->GetOutput();
+  m_CorrectionImage->DisconnectPipeline();
+
+  /*
+  CastFilterPointer caster = CastFilterType::New();
+  caster->SetInput( tempImage );
+  caster->Update();
+
+  WriterPointer writer = WriterType::New();
+  writer->SetInput( caster->GetOutput() );
+  writer->SetFileName( "/Users/kishoremosaliganti/CorrectionImage.tif" );
+  writer->Update();
+  */
 }
 
 
@@ -616,57 +697,6 @@ AllocateROI()
 
 
 template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >
-::OverlapRegion( ImagePointer A, ImagePointer B,
-  RegionType& rA, RegionType& rB )
-{
-  SizeType sizeA, sizeB, s;
-  sizeA = A->GetLargestPossibleRegion().GetSize();
-  sizeB = B->GetLargestPossibleRegion().GetSize();
-
-  IndexType sIndexA, sIndexB;
-  IndexType tIndexA, tIndexB;
-
-  A->TransformPhysicalPointToIndex( B->GetOrigin(), tIndexA );
-  B->TransformPhysicalPointToIndex( A->GetOrigin(), tIndexB );
-
-  PointType originA = A->GetOrigin();
-  PointType originB = B->GetOrigin();
-
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    if ( originA[i] > originB[i] )
-    {
-      sIndexA[i] = 0;
-      sIndexB[i] = tIndexB[i];
-      s[i] = sizeA[i];
-      if ( s[i] > static_cast< SizeValueType >( sizeB[i] - sIndexB[i] - 1 ) )
-      {
-        s[i] = sizeB[i] - sIndexB[i];
-      }
-    }
-    else
-    {
-      sIndexB[i] = 0;
-      sIndexA[i] = tIndexA[i];
-      s[i] = sizeB[i];
-      if ( s[i] > static_cast< SizeValueType >(
-        sizeA[i] - sIndexA[i] - 1 ) )
-      {
-        s[i] = sizeA[i] - sIndexA[i];
-      }
-    }
-  }
-
-  rA.SetIndex( sIndexA );
-  rA.SetSize( s );
-  rB.SetIndex( sIndexB );
-  rB.SetSize( s );
-}
-
-
-template < class TValueType, class TInputImage >
 ITK_THREAD_RETURN_TYPE
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ThreaderCallback(void * arg)
@@ -753,6 +783,7 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
   IndexType temp;
+  double num, den;
 
   unsigned int i, j, k, quotient;
   for( unsigned int sz = startP; sz <= endP; sz++ )
@@ -781,7 +812,7 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
 
       if ( m_CorrectionImage )
       {
-        std::cout << "Correction used" << std::endl;
+        //std::cout << "Correction used" << std::endl;
         IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
         cIt.GoToBegin();
         RIteratorType corrIt( m_CorrectionImage,
@@ -793,9 +824,19 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
           {
             corrIt.GoToBegin();
           }
+
           p = static_cast<PixelType>( m_CorrectionThreshold );
-          p += static_cast<PixelType>( 100*double(cIt.Get() - m_CorrectionThreshold)/double(corrIt.Get()) );
-          cIt.Set( p );
+          if ( cIt.Get() > m_CorrectionThreshold )
+          {
+            num = double(cIt.Get()) - m_CorrectionThreshold;
+            den = corrIt.Get();
+            if ( den < 0.01 )
+            {
+              den = 0.01;
+            }
+            p += static_cast<PixelType>( num/den );
+            cIt.Set( p );
+          }
           ++cIt;
           ++corrIt;
         }
