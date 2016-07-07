@@ -158,30 +158,30 @@ int main ( int argc, char* argv[] )
         reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
 
-        //PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
-        //pAFilter->SetInput( reader->GetOutput() );
-        //pAFilter->SetOrder( axesOrder );
-        //pAFilter->Update();
-        ImageType::Pointer pImage = reader->GetOutput();
+//        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
+//        pAFilter->SetInput( reader->GetOutput() );
+//        pAFilter->SetOrder( axesOrder );
+//        pAFilter->Update();
+//        ImageType::Pointer pImage = pAFilter->GetOutput();
 
-        ImageType::Pointer currentImage = ImageType::New();
-        currentImage->SetOrigin( pImage->GetOrigin() );
-        currentImage->SetSpacing( pImage->GetSpacing() );
-        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-        currentImage->Allocate();
+//        ImageType::Pointer currentImage = ImageType::New();
+//        currentImage->SetOrigin( pImage->GetOrigin() );
+//        currentImage->SetSpacing( pImage->GetSpacing() );
+//        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+//        currentImage->Allocate();
 
-        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
-        while(!pIt.IsAtEnd())
-        {
-          cIt.Set( pIt.Get() );
-          ++pIt;
-          ++cIt;
-        }
+//        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+//        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+//        while(!pIt.IsAtEnd())
+//        {
+//          cIt.Set( pIt.Get() );
+//          ++pIt;
+//          ++cIt;
+//        }
 
-        CastFilterType::Pointer caster = CastFilterType::New();
-        caster->SetInput( currentImage );//rescale->GetOutput()
-        caster->Update();
+//        CastFilterType::Pointer caster = CastFilterType::New();
+//        caster->SetInput( currentImage );//rescale->GetOutput()
+//        caster->Update();
 
         unsigned int lastindex1 = filename.find_last_of( "/" );
         unsigned int lastindex2 = filename.find_last_of( "." );
@@ -192,7 +192,7 @@ int main ( int argc, char* argv[] )
 
         WriterType::Pointer writer = WriterType::New();
         writer->SetFileName( filename3.str().c_str() );
-        writer->SetInput( caster->GetOutput() );
+        writer->SetInput( reader->GetOutput() );
         //writer->UseCompressionOn();
         writer->Update();
       }
