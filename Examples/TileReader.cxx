@@ -203,6 +203,7 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
   {
     numOfThreads = atof( opt->getValue( 'n' ) );
+    numOfThreads = 1;
   }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
@@ -221,7 +222,7 @@ int main ( int argc, char* argv[] )
 
   if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
   {
-    settingsReader->SetBlending( 1 );
+    settingsReader->SetBlending( 0 );//1
   }
   else
   {

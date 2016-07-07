@@ -77,14 +77,14 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   sizeA = A->GetLargestPossibleRegion().GetSize();
   sizeB = B->GetLargestPossibleRegion().GetSize();
 
+  PointType originA = A->GetOrigin();
+  PointType originB = B->GetOrigin();
+
   IndexType sIndexA, sIndexB;
   IndexType tIndexA, tIndexB;
 
-  A->TransformPhysicalPointToIndex( B->GetOrigin(), tIndexA );
-  B->TransformPhysicalPointToIndex( A->GetOrigin(), tIndexB );
-
-  PointType originA = A->GetOrigin();
-  PointType originB = B->GetOrigin();
+  A->TransformPhysicalPointToIndex( originB, tIndexA );
+  B->TransformPhysicalPointToIndex( originA, tIndexB );
 
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
@@ -127,6 +127,8 @@ UpdateTileCoverage( std::istream& os )
   {
     m_TileCoverStart[i].resize( m_TileNumber[i] );
     m_TileCoverEnd[i].resize( m_TileNumber[i] );
+    m_TileCoverStartClipped[i].resize( m_TileNumber[i] );
+    m_TileCoverEndClipped[i].resize( m_TileNumber[i] );
   }
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
@@ -134,48 +136,44 @@ UpdateTileCoverage( std::istream& os )
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
-      if ( !m_Blending )
-      {
-        m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3]
-            + 0.5*m_TileOverlap[j];
-        m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6]
-            - 0.5*m_TileOverlap[j];
-      }
-      else
-      {
-        m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
-        m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
-      }
+      m_TileCoverStart[j][temp] = m_TransformedTileInfoValue[i][j+3];
+      m_TileCoverEnd[j][temp] = m_TransformedTileInfoValue[i][j+6];
     }
   }
 
-  if ( m_Blending )
+
+  for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    return;
+    for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
+    {
+      unsigned int temp =  m_TileInfoValue[i][j];
+
+      m_TileCoverStartClipped[j][temp] = m_TransformedTileInfoValue[i][j+3]
+          + 0.5*m_TileOverlap[j];
+      m_TileCoverEndClipped[j][temp] = m_TransformedTileInfoValue[i][j+6]
+          - 0.5*m_TileOverlap[j];
+    }
   }
 
   // Identify first and last tile in each dimension
   // Extend the coverage of the first and last tile by overlap
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    unsigned int firstTile, lastTile;
-    firstTile = 0;
-    lastTile = m_TileNumber[j]-1;
+    unsigned int firstTile(0), lastTile(m_TileNumber[j]-1);
 
-    double start, stop;
     for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
     {
-      if ( m_TileCoverStart[j][firstTile] > m_TileCoverStart[j][k] )
+      if ( m_TileCoverStartClipped[j][firstTile] > m_TileCoverStartClipped[j][k] )
       {
         firstTile = k;
       }
-      if ( m_TileCoverEnd[j][lastTile] < m_TileCoverEnd[j][k] )
+      if ( m_TileCoverEndClipped[j][lastTile] < m_TileCoverEndClipped[j][k] )
       {
         lastTile = k;
       }
     }
-    m_TileCoverStart[j][firstTile] = m_MinimumStart[j];
-    m_TileCoverEnd[j][lastTile] = m_MaximumEnd[j];
+    m_TileCoverStartClipped[j][firstTile] = m_MinimumStart[j];
+    m_TileCoverEndClipped[j][lastTile] = m_MaximumEnd[j];
   }
 }
 
@@ -200,6 +198,7 @@ ReadTileInfo( std::istream& os )
 {
   std::string value, line;
 
+  // Do a string search to determine the locations
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
     m_NumberOfTiles *= m_SettingFieldValue[i];
@@ -243,10 +242,6 @@ ReadTileInfo( std::istream& os )
       //std::cout << std::endl;
       i++;
     }
-    else
-    {
-      //std::cout << std::endl;
-    }
   }
 }
 
@@ -275,7 +270,7 @@ TransformCoordinateAxes()
 
   //std::cout << rotMatrix << std::endl;
 
-  m_TransformedTileInfoValue.set_size(m_NumberOfTiles, 3*ImageDimension);
+  m_TransformedTileInfoValue.set_size( m_NumberOfTiles, 3*ImageDimension );
   for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
   {
     for( unsigned int j = 0; j < ImageDimension; j++ )
@@ -332,7 +327,7 @@ UpdateFileNameLookup( std::istream& os )
         searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
 
         //std::cout << i << j << k << std::endl;
-        for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
+        for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
         {
           filename = directory->GetFile( m );
 
@@ -372,7 +367,6 @@ Read()
 
   bool foundFile = false;
   std::string filename;
-  std::stringstream filename2;
   for ( unsigned m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
@@ -392,9 +386,9 @@ Read()
     return;
   }
 
-  filename2 << m_SettingsDirectory << filename;
+  filename =  m_SettingsDirectory + filename;
 
-  std::ifstream os ( filename2.str().c_str() );
+  std::ifstream os ( filename.c_str() );
 
   if ( !os )
   {
@@ -442,18 +436,18 @@ Read()
 
   // Read one image to get m_TileDimensions and m_TileSpacing
   {
-  ReaderPointer reader = ReaderType::New();
-  reader->SetFileName ( m_SampleName );
-  reader->SetGlobalWarningDisplay( 0 );
-  reader->Update();
-  ImagePointer currentImage = reader->GetOutput();
-  currentImage->DisconnectPipeline();
-  m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
+    ReaderPointer reader = ReaderType::New();
+    reader->SetFileName ( m_SampleName );
+    reader->SetGlobalWarningDisplay( 0 );
+    reader->Update();
+    ImagePointer currentImage = reader->GetOutput();
+    currentImage->DisconnectPipeline();
+    m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
-  m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
-  m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
-  m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
-  std::cout << "Read tile dimensions" << std::endl;
+    m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
+    m_TileSpacing[1] = m_TileSize[0]/m_TileDimension[1];
+    m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
+    std::cout << "Read tile dimensions" << std::endl;
   }
 
   // Read the correction image
@@ -490,6 +484,7 @@ ReadCorrectionImage()
     {
       if ( filename.find( m_ChannelName ) != std::string::npos )
       {
+        IsCorrectionImage = true;
         filename2 << m_CorrectionDirectory.c_str() << filename;
 
         // Read the correction image
@@ -625,16 +620,6 @@ AllocateROI()
   m_ROIImage->FillBuffer( 0.0 );
   std::cout << "Allocated ROI image" << std::endl;
 
-  if ( m_Blending )
-  {
-    m_ROIOverlapImage = ImageType::New();
-    m_ROIOverlapImage->SetOrigin( m_ROIOrigin );
-    m_ROIOverlapImage->SetSpacing( m_TileSpacing );
-    m_ROIOverlapImage->SetRegions( m_ROI );
-    m_ROIOverlapImage->Allocate();
-    m_ROIOverlapImage->FillBuffer( 0.0 );
-  }
-
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -676,12 +661,6 @@ AllocateROI()
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
-  m_Reader.resize( m_NumberOfThreads );
-  for( unsigned int i = 0; i < m_NumberOfThreads; i++ )
-  {
-    m_Reader[i] = ReaderType::New();
-  }
-
   ThreadStruct str;
   str.Filter  = this;
 
@@ -690,11 +669,7 @@ AllocateROI()
   threader->SetSingleMethod( this->ThreaderCallback, &str );
   threader->SingleMethodExecute();
 
-  for( unsigned int i = 0; i < m_NumberOfThreads; i++ )
-  {
-    m_Reader[i] = ITK_NULLPTR;
-  }
-  m_Reader.clear();
+  BlendingNormalization();
   std::cout << "ROI filled" << std::endl;
 }
 
@@ -770,13 +745,6 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
 {
-  FixedArray<unsigned int, 3> axesOrder;
-  axesOrder[0] = 1;
-  axesOrder[1] = 0;
-  axesOrder[2] = 2;
-
-  PixelType p;
-
   unsigned int  sz2, sz1, sz0;
   sz0 = ( m_ScanEnd[0] - m_ScanStart[0] + 1 );
   sz1 = ( m_ScanEnd[1] - m_ScanStart[1] + 1 );
@@ -785,160 +753,190 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
-  IndexType temp;
-  double num, den;
+  RegionType roi;
+  SizeType clipTileSize;
+  IndexType clipTileIndex;
+  PointType clipTileOrigin;
 
-  unsigned int i, j, k, quotient;
+  unsigned int index[3];
+  unsigned int quotient;
   for( unsigned int sz = startP; sz <= endP; sz++ )
   {
-    k = m_ScanStart[2] + ( sz ) % ( sz2 );
+    index[2] = m_ScanStart[2] + ( sz ) % ( sz2 );
     quotient = static_cast<unsigned int>(sz/sz2);
-    j = m_ScanStart[1] + ( quotient ) % ( sz1 );
-    i = m_ScanStart[0] + static_cast<unsigned int>(quotient/sz1);
+    index[1] = m_ScanStart[1] + ( quotient ) % ( sz1 );
+    index[0] = m_ScanStart[0] + static_cast<unsigned int>(quotient/sz1);
     //std::cout << i << ' ' << j << ' ' << k << std::endl;
 
-    currentTileOrigin[0] = m_TileCoverStart[0][i];
-    currentTileOrigin[1] = m_TileCoverStart[1][j];
-    currentTileOrigin[2] = m_TileCoverStart[2][k];
-
-    m_ROIImage->TransformPhysicalPointToIndex( currentTileOrigin, temp );
-    std::string filename = m_TileFileNameArray[i][j][k];
+    std::string filename = m_TileFileNameArray[index[0]][index[1]][index[2]];
     //std::cout << filename.c_str() << std::endl;
     if  ( ! filename.empty() )
     {
+      for( unsigned int m = 0; m < ImageDimension; m++ )
+      {
+        currentTileOrigin[m] = m_TileCoverStart[m][index[m]];
+        clipTileSize[m] = 1 + static_cast<SizeValueType>(
+                    ( m_TileCoverEndClipped[m][index[m]] - m_TileCoverStartClipped[m][index[m]] )/m_TileSpacing[m] );
+        clipTileOrigin[m] = m_TileCoverStartClipped[m][index[m]];
+      }
+
       //std::cout << i << ' ' << j << ' ' << k << std::endl;
-      m_Reader[threadId]->SetFileName( filename.c_str() );
-      m_Reader[threadId]->Update();
+      ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
+      tileImage->SetOrigin( currentTileOrigin );
 
-      ImagePointer cImage = m_Reader[threadId]->GetOutput();
-      cImage->DisconnectPipeline();
+      tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
+      roi.SetSize( clipTileSize );
+      roi.SetIndex( clipTileIndex );
 
-      if ( m_CorrectionImage )
-      {
-        //std::cout << "Correction used" << std::endl;
-        IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
-        cIt.GoToBegin();
-        RIteratorType corrIt( m_CorrectionImage,
-                              m_CorrectionImage->GetLargestPossibleRegion() );
-        corrIt.GoToBegin();
-        while( !cIt.IsAtEnd() )
-        {
-          if ( corrIt.IsAtEnd() )
-          {
-            corrIt.GoToBegin();
-          }
+      // Extract ROI
+      ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
+      roiFilter->SetRegionOfInterest( roi );
+      roiFilter->SetInput( tileImage );
+      roiFilter->Update();
+      ImagePointer currentImage = roiFilter->GetOutput();
+      currentImage->DisconnectPipeline();
 
-          p = static_cast<PixelType>( m_CorrectionThreshold );
-          if ( cIt.Get() > m_CorrectionThreshold )
-          {
-            num = double(cIt.Get()) - m_CorrectionThreshold;
-            den = corrIt.Get();
-            if ( den < 0.01 )
-            {
-              den = 0.01;
-            }
-            p += static_cast<PixelType>( num/den );
-            cIt.Set( p );
-          }
-          ++cIt;
-          ++corrIt;
-        }
-      }
-
-      PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
-      pAFilter->SetInput( cImage );
-      pAFilter->SetOrder( axesOrder );
-      pAFilter->Update();
-      ImagePointer pImage = pAFilter->GetOutput();
-
-      ImagePointer currentImage = ImageType::New();
-      currentImage->SetOrigin( pImage->GetOrigin() );
-      currentImage->SetSpacing( pImage->GetSpacing() );
-      currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-      currentImage->Allocate();
-      currentImage->FillBuffer( 0 );
-
-      PixelType q;
-      IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-      IteratorType currentIt( currentImage,
-                              currentImage->GetLargestPossibleRegion() );
-      while( !pIt.IsAtEnd() )
-      {
-        currentIt.Set( pIt.Get() );
-        ++pIt;
-        ++currentIt;
-      }
-
-      currentImage->SetOrigin( currentTileOrigin );
-      OverlapRegion( currentImage, m_ROIImage,
+      OverlapRegion( currentImage , m_ROIImage,
                      currentTileRegion, roiSubRegion );
 
       // Using these images, fill up roiImage
-      if ( m_Blending )
+      IteratorType rIt( m_ROIImage, roiSubRegion );
+      rIt.GoToBegin();
+      IteratorType tIt( currentImage, currentTileRegion );
+      tIt.GoToBegin();
+
+      PixelType p;
+      while( !tIt.IsAtEnd() )
       {
-        std::cout << "Blending used" << std::endl;
-        IteratorType rIt( m_ROIImage, roiSubRegion );
-        rIt.GoToBegin();
-        IteratorType roIt( m_ROIOverlapImage, roiSubRegion );
-        roIt.GoToBegin();
-        IteratorType tIt( currentImage, currentTileRegion );
-        tIt.GoToBegin();
-
-        PixelType p;
-        while( !tIt.IsAtEnd() )
-        {
-          p = rIt.Get();
-          rIt.Set( p + tIt.Get() );
-          roIt.Set( roIt.Get() + 1 );
-          ++tIt;
-          ++rIt;
-          ++roIt;
-        }
+        rIt.Set( tIt.Get() );//rIt.Get() +
+        ++tIt;
+        ++rIt;
       }
-      else
-      {
-        IteratorType rIt( m_ROIImage, roiSubRegion );
-        rIt.GoToBegin();
-        IteratorType tIt( currentImage, currentTileRegion );
-        tIt.GoToBegin();
-
-        PixelType p;
-        while( !tIt.IsAtEnd() )
-        {
-          rIt.Set( tIt.Get() );
-          ++tIt;
-          ++rIt;
-        }
-      }
-    }
-  }
-
-  if ( m_Blending )
-  {
-    std::cout << "Blending normalization" << std::endl;
-    IteratorType rIt( m_ROIImage, m_ROI );
-    rIt.GoToBegin();
-    IteratorType roIt( m_ROIOverlapImage, m_ROI );
-    roIt.GoToBegin();
-
-    PixelType p, q;
-    while( !roIt.IsAtEnd() )
-    {
-      p = rIt.Get();
-      q = roIt.Get();
-
-      if ( q > 0.0 )
-      {
-        rIt.Set( static_cast<PixelType>( double(p)/q) );
-      }
-
-      ++rIt;
-      ++roIt;
     }
   }
 }
 
 
+template < class TValueType, class TInputImage >
+typename SettingsInfoExtractionFilter< TValueType, TInputImage >::ImagePointer
+SettingsInfoExtractionFilter< TValueType, TInputImage >::
+ExtractCorrectedAndFlippedTile( std::string& filename )
+{
+  ReaderPointer m_Reader = ReaderType::New();
+  m_Reader->SetFileName( filename.c_str() );
+  m_Reader->Update();
+
+  ImagePointer cImage = m_Reader->GetOutput();
+  cImage->DisconnectPipeline();
+
+  PixelType p;
+  double num, den;
+  if ( m_CorrectionImage )
+  {
+    //std::cout << "Correction used" << std::endl;
+    IteratorType cIt( cImage, cImage->GetLargestPossibleRegion() );
+    cIt.GoToBegin();
+    RIteratorType corrIt( m_CorrectionImage,
+                          m_CorrectionImage->GetLargestPossibleRegion() );
+    corrIt.GoToBegin();
+    while( !cIt.IsAtEnd() )
+    {
+      if ( corrIt.IsAtEnd() )
+      {
+        corrIt.GoToBegin();
+      }
+
+      p = static_cast<PixelType>( m_CorrectionThreshold );
+      if ( cIt.Get() > m_CorrectionThreshold )
+      {
+        num = double(cIt.Get()) - m_CorrectionThreshold;
+        den = corrIt.Get();
+        if ( den < 0.01 )
+        {
+          den = 0.01;
+        }
+        p += static_cast<PixelType>( num/den );
+        cIt.Set( p );
+      }
+      ++cIt;
+      ++corrIt;
+    }
+  }
+
+  FixedArray<unsigned int, 3> axesOrder;
+  axesOrder[0] = 1;
+  axesOrder[1] = 0;
+  axesOrder[2] = 2;
+
+  PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
+  pAFilter->SetInput( cImage );
+  pAFilter->SetOrder( axesOrder );
+  pAFilter->Update();
+  ImagePointer pImage = pAFilter->GetOutput();
+
+  ImagePointer currentImage = ImageType::New();
+  currentImage->SetOrigin( pImage->GetOrigin() );
+  currentImage->SetSpacing( pImage->GetSpacing() );
+  currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+  currentImage->Allocate();
+  currentImage->FillBuffer( 0 );
+
+  PixelType q;
+  IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+  IteratorType currentIt( currentImage,
+                        currentImage->GetLargestPossibleRegion() );
+  while( !pIt.IsAtEnd() )
+  {
+    currentIt.Set( pIt.Get() );
+    ++pIt;
+    ++currentIt;
+  }
+
+  return currentImage;
+}
+
+
+
+template < class TValueType, class TInputImage >
+void
+SettingsInfoExtractionFilter< TValueType, TInputImage >::
+BlendingNormalization()
+{
+  if ( !m_Blending )
+  {
+    return;
+  }
+
+  std::cout << "Blending normalization" << std::endl;
+  m_ROIOverlapImage = ImageType::New();
+  m_ROIOverlapImage->SetOrigin( m_ROIOrigin );
+  m_ROIOverlapImage->SetSpacing( m_TileSpacing );
+  m_ROIOverlapImage->SetRegions( m_ROI );
+  m_ROIOverlapImage->Allocate();
+  m_ROIOverlapImage->FillBuffer( 0.0 );
+
+  // Initialize the blending buffer
+
+  IteratorType rIt( m_ROIImage, m_ROI );
+  rIt.GoToBegin();
+  IteratorType roIt( m_ROIOverlapImage, m_ROI );
+  roIt.GoToBegin();
+
+  PixelType p, q;
+  while( !roIt.IsAtEnd() )
+  {
+    p = rIt.Get();
+    q = roIt.Get();
+
+    if ( q > 0.0 )
+    {
+      rIt.Set( static_cast<PixelType>( p/q) );
+    }
+
+    ++rIt;
+    ++roIt;
+  }
+}
 
 } /* end namespace itk */
 

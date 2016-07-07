@@ -132,8 +132,10 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef typename GaussianFilterType::Pointer GaussianFilterPointer;
 
   typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
-  typedef ROIFilterType::Pointer ROIFilterPointer;
+  typedef typename ROIFilterType::Pointer ROIFilterPointer;
 
+  typedef RegionOfInterestImageFilter< ImageType, ImageType > ROIFilter3DType;
+  typedef typename ROIFilter3DType::Pointer ROIFilter3DPointer;
 
   typedef Image< PixelType, 2 > OutputImageType;
   typedef RescaleIntensityImageFilter< RImageType, RImageType > RescaleFilterType;
@@ -210,6 +212,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void OverlapRegion( ImagePointer A, ImagePointer B,
                       RegionType& rA, RegionType& rB );
   void ReadCorrectionImage();
+  void BlendingNormalization();
+  ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
 
   static ITK_THREAD_RETURN_TYPE ThreaderCallback(void * arg);
 
@@ -245,6 +249,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
 
   DoubleVectorType  m_TileCoverStart[3];
   DoubleVectorType  m_TileCoverEnd[3];
+  DoubleVectorType  m_TileCoverStartClipped[3];
+  DoubleVectorType  m_TileCoverEndClipped[3];
   unsigned int      m_ScanStart[3];
   unsigned int      m_ScanEnd[3];
 
@@ -268,8 +274,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   RImagePointer m_CorrectionImage;
   ValueType     m_CorrectionThreshold;
   ValueType     m_CorrectionVariance;
-
-  std::vector<ReaderPointer> m_Reader;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented
