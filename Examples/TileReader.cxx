@@ -272,7 +272,7 @@ int main ( int argc, char* argv[] )
 
   if ( zEnd > settingsReader->GetStitchDimension()[2] )
   {
-    zEnd = settingsReader->GetStitchDimension()[2];
+    zEnd = settingsReader->GetStitchDimension()[2] - 1;
   }
 
   if ( zStart > zEnd )

@@ -780,7 +780,6 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
         clipTileOrigin[m] = m_TileCoverStartClipped[m][index[m]];
       }
 
-      //std::cout << i << ' ' << j << ' ' << k << std::endl;
       ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
       tileImage->SetOrigin( currentTileOrigin );
 
@@ -876,7 +875,7 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
 
   ImagePointer currentImage = ImageType::New();
   currentImage->SetOrigin( pImage->GetOrigin() );
-  currentImage->SetSpacing( pImage->GetSpacing() );
+  currentImage->SetSpacing( m_TileSpacing );
   currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
   currentImage->Allocate();
   currentImage->FillBuffer( 0 );
@@ -884,7 +883,7 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
   PixelType q;
   IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
   IteratorType currentIt( currentImage,
-                        currentImage->GetLargestPossibleRegion() );
+                          currentImage->GetLargestPossibleRegion() );
   while( !pIt.IsAtEnd() )
   {
     currentIt.Set( pIt.Get() );
