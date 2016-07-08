@@ -151,12 +151,11 @@ int main ( int argc, char* argv[] )
       for( unsigned int k = 0; k < tileNumber[2]; k++ )
       {
         filename = settingsReader->GetTileFileNameArray()[i][j][k];
-        std::cout << filename << std::endl;
+        std::cout << "Filename: " << filename << std::endl;
         std::stringstream  filename3;
 
         ReaderType::Pointer reader = ReaderType::New();
         reader->SetFileName ( filename.c_str() );
-        reader->SetGlobalWarningDisplay( 0 );
         reader->Update();
 
 //        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
