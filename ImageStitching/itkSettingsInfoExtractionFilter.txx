@@ -739,8 +739,14 @@ FillROI()
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
 
+          std::cout << "ROI extraction complete: " << roi << std::endl;
+
           OverlapRegion( currentImage , m_ROIImage,
                          currentTileRegion, roiSubRegion );
+
+          std::cout << "Roi Region: " << roiSubRegion << std::endl;
+
+          std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
 
           // Using these images, fill up roiImage
           IteratorType rIt( m_ROIImage, roiSubRegion );
