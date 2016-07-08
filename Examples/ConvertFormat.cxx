@@ -151,6 +151,7 @@ int main ( int argc, char* argv[] )
       for( unsigned int k = 0; k < tileNumber[2]; k++ )
       {
         filename = settingsReader->GetTileFileNameArray()[i][j][k];
+        std::cout << filename << std::endl;
         std::stringstream  filename3;
 
         ReaderType::Pointer reader = ReaderType::New();
