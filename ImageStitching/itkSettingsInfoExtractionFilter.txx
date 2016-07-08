@@ -732,6 +732,17 @@ FillROI()
           std::cout << "ROI: " << roi << std::endl;
           std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
 
+          for( unsigned int m = 0; m < ImageDimension; m++ )
+          {
+            if ( clipTileIndex[m] + clipTileSize[m] > m_TileDimension[m] )
+            {
+              clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m];
+            }
+          }
+
+          std::cout << "ROI: " << roi << std::endl;
+          std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
+
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
           roiFilter->SetRegionOfInterest( roi );
