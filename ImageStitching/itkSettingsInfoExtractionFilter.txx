@@ -717,6 +717,15 @@ FillROI()
           std::cout << "Extraction complete" << std::endl;
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
+
+          for(unsigned int m = 0; m < ImageDimension; m++ )
+          {
+              if ( clipTileIndex[m] < 0 )
+              {
+                  clipTileIndex[m] = 0;
+              }
+          }
+
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
