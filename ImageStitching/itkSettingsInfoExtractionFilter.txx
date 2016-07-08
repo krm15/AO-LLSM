@@ -144,13 +144,11 @@ UpdateTileCoverage( std::istream& os )
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
+    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
     {
-      unsigned int temp =  m_TileInfoValue[i][j];
-
-      m_TileCoverStartClipped[j][temp] = m_TransformedTileInfoValue[i][j+3]
+      m_TileCoverStartClipped[j][k] = m_TileCoverStart[j][k]
           + 0.5*m_TileOverlap[j];
-      m_TileCoverEndClipped[j][temp] = m_TransformedTileInfoValue[i][j+6]
+      m_TileCoverEndClipped[j][k] = m_TileCoverEnd[j][k]
           - 0.5*m_TileOverlap[j];
     }
   }
@@ -311,6 +309,7 @@ UpdateFileNameLookup( std::istream& os )
 
   m_TileFileNameArray.resize( m_SettingFieldValue[0] );
 
+  unsigned int m_TrueCountOfTiles = 0;
   for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
   {
     m_TileFileNameArray[i].resize( m_TileNumber[1] );
@@ -344,7 +343,7 @@ UpdateFileNameLookup( std::istream& os )
               ChannelNameSet = true;
               m_SampleName = filename2.str();
             }
-
+            m_TrueCountOfTiles++;
           }
           filename2.str( std::string() );
         }
@@ -353,6 +352,7 @@ UpdateFileNameLookup( std::istream& os )
       }
     }
   }
+  m_NumberOfTiles = m_TrueCountOfTiles;
 }
 
 
@@ -418,6 +418,10 @@ Read()
   ReadTileInfo( os );
   std::cout << "Read tile info" << std::endl;
 
+  // Create a lookup of filenames
+  UpdateFileNameLookup( os );
+  std::cout << "Updated file name lookup" << std::endl;
+
   TransformCoordinateAxes();
   std::cout << "Transformed coordinate axes" << std::endl;
 
@@ -428,10 +432,6 @@ Read()
   // Create a vector of tile origins along each axis for given timepoint
   UpdateTileCoverage( os );
   std::cout << "Updated tile coverage" << std::endl;
-
-  // Create a lookup of filenames
-  UpdateFileNameLookup( os );
-  std::cout << "Updated file name lookup" << std::endl;
 
   // Read one image to get m_TileDimensions and m_TileSpacing
   {
@@ -628,8 +628,8 @@ AllocateROI()
     double scanStartVal = 100000, scanEndVal = -100000;
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
-      //std::cout << m_TileCoverStart[k][i] << ' '
-      //          << m_TileCoverEnd[k][i] << std::endl;
+      std::cout << k << ' ' << i << ' ' << m_TileCoverStart[k][i] << ' '
+                << m_TileCoverEnd[k][i] << std::endl;
       if ( ( beginCorner >= m_TileCoverStart[k][i] - 0.0001 ) &&
            ( beginCorner <= m_TileCoverEnd[k][i] + 0.0001 ) &&
            ( scanStartVal >= m_TileCoverStart[k][i] ) )
@@ -694,9 +694,13 @@ FillROI()
           currentTileOrigin[1] = m_TileCoverStart[1][j];
           currentTileOrigin[2] = m_TileCoverStart[2][k];
 
+          std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
+
           clipTileOrigin[0] = m_TileCoverStartClipped[0][i];
           clipTileOrigin[1] = m_TileCoverStartClipped[1][j];
           clipTileOrigin[2] = m_TileCoverStartClipped[2][k];
+
+          std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
           clipTileSize[0] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[0][i] - m_TileCoverStartClipped[0][i] )/m_TileSpacing[0] );
@@ -705,13 +709,18 @@ FillROI()
           clipTileSize[2] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[2][k] - m_TileCoverStartClipped[2][k] )/m_TileSpacing[2] );
 
+          std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
           ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
           tileImage->SetOrigin( currentTileOrigin );
 
+          std::cout << "Extraction complete" << std::endl;
+
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
+
+          std::cout << "ROI: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
