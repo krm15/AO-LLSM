@@ -459,6 +459,12 @@ Read()
   ReadCorrectionImage();
   std::cout << "Read correction image" << std::endl;
 
+  // Store m_TileDimension correctly since image is flipped
+  unsigned int temp = m_TileDimension[0];
+  m_TileDimension[0] = m_TileDimension[1];
+  m_TileDimension[1] = temp;
+
+
   os.close();
 }
 
