@@ -164,26 +164,26 @@ int main ( int argc, char* argv[] )
 //        pAFilter->SetInput( reader->GetOutput() );
 //        pAFilter->SetOrder( axesOrder );
 //        pAFilter->Update();
-//        ImageType::Pointer pImage = pAFilter->GetOutput();
+        ImageType::Pointer pImage = reader->GetOutput();
 
-//        ImageType::Pointer currentImage = ImageType::New();
-//        currentImage->SetOrigin( pImage->GetOrigin() );
-//        currentImage->SetSpacing( pImage->GetSpacing() );
-//        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-//        currentImage->Allocate();
+        ImageType::Pointer currentImage = ImageType::New();
+        currentImage->SetOrigin( pImage->GetOrigin() );
+        currentImage->SetSpacing( pImage->GetSpacing() );
+        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+        currentImage->Allocate();
 
-//        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-//        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
-//        while(!pIt.IsAtEnd())
-//        {
-//          cIt.Set( pIt.Get() );
-//          ++pIt;
-//          ++cIt;
-//        }
+        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+        while(!pIt.IsAtEnd())
+        {
+          cIt.Set( pIt.Get() );
+          ++pIt;
+          ++cIt;
+        }
 
-//        CastFilterType::Pointer caster = CastFilterType::New();
-//        caster->SetInput( currentImage );//rescale->GetOutput()
-//        caster->Update();
+        CastFilterType::Pointer caster = CastFilterType::New();
+        caster->SetInput( currentImage );//rescale->GetOutput()
+        caster->Update();
 
           std::stringstream  filename3;
           unsigned int lastindex1 = filename.find_last_of( "/" );
@@ -195,7 +195,7 @@ int main ( int argc, char* argv[] )
 
           WriterType::Pointer writer = WriterType::New();
           writer->SetFileName( filename3.str().c_str() );
-          writer->SetInput( reader->GetOutput() );
+          writer->SetInput( caster->GetOutput() );
           //writer->UseCompressionOn();
           writer->Update();
         }

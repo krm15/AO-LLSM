@@ -326,7 +326,6 @@ UpdateFileNameLookup( std::istream& os )
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
 
-        //std::cout << i << j << k << std::endl;
         for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
         {
           filename = directory->GetFile( m );
@@ -438,10 +437,8 @@ Read()
   {
     ReaderPointer reader = ReaderType::New();
     reader->SetFileName ( m_SampleName );
-    reader->SetGlobalWarningDisplay( 0 );
     reader->Update();
     ImagePointer currentImage = reader->GetOutput();
-    currentImage->DisconnectPipeline();
     m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
     m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];
