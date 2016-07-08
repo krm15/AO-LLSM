@@ -144,12 +144,24 @@ UpdateTileCoverage( std::istream& os )
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
+    m_MinimumStart[j] = 1000000.0;
+    m_MaximumEnd[j]   = -1000000.0;
     for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
     {
       m_TileCoverStartClipped[j][k] = m_TileCoverStart[j][k]
           + 0.5*m_TileOverlap[j];
       m_TileCoverEndClipped[j][k] = m_TileCoverEnd[j][k]
           - 0.5*m_TileOverlap[j];
+
+      if ( m_MinimumStart[j] > m_TileCoverStart[j][k] )
+      {
+        m_MinimumStart[j] = m_TileCoverStart[j][k];
+      }
+
+      if ( m_MaximumEnd[j] < m_TileCoverEnd[j][k] )
+      {
+        m_MaximumEnd[j] = m_TileCoverEnd[j][k];
+      }
     }
   }
 
@@ -181,11 +193,11 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 UpdateStitchDimensions( std::istream& os )
 {
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    m_MinimumStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
-    m_MaximumEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
-  }
+//  for( unsigned int i = 0; i < ImageDimension; i++ )
+//  {
+//    m_MinimumStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
+//    m_MaximumEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
+//  }
 }
 
 
@@ -424,10 +436,6 @@ Read()
 
   TransformCoordinateAxes();
   std::cout << "Transformed coordinate axes" << std::endl;
-
-  // Identify total tile coverage
-  UpdateStitchDimensions( os );
-  std::cout << "Updated stitch dimensions" << std::endl;
 
   // Create a vector of tile origins along each axis for given timepoint
   UpdateTileCoverage( os );
@@ -709,12 +717,12 @@ FillROI()
           clipTileSize[2] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[2][k] - m_TileCoverStartClipped[2][k] )/m_TileSpacing[2] );
 
-          std::cout << "Clip Tile Size " << clipTileSize << std::endl;
+          //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
           ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
           tileImage->SetOrigin( currentTileOrigin );
 
-          std::cout << "Extraction complete" << std::endl;
+          //std::cout << "Extraction complete" << std::endl;
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
 
@@ -729,7 +737,7 @@ FillROI()
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
-          std::cout << "ROI: " << roi << std::endl;
+          //std::cout << "ROI: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
@@ -739,14 +747,14 @@ FillROI()
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
 
-          std::cout << "ROI extraction complete: " << roi << std::endl;
+          //std::cout << "ROI extraction complete " << std::endl;
 
           OverlapRegion( currentImage , m_ROIImage,
                          currentTileRegion, roiSubRegion );
 
-          std::cout << "Roi Region: " << roiSubRegion << std::endl;
+          //std::cout << "Roi Region: " << roiSubRegion << std::endl;
 
-          std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
+          //std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
 
           // Using these images, fill up roiImage
           IteratorType rIt( m_ROIImage, roiSubRegion );
