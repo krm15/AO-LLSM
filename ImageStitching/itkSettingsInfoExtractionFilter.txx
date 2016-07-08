@@ -636,8 +636,8 @@ AllocateROI()
     double scanStartVal = 100000, scanEndVal = -100000;
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
-      std::cout << k << ' ' << i << ' ' << m_TileCoverStart[k][i] << ' '
-                << m_TileCoverEnd[k][i] << std::endl;
+      //std::cout << k << ' ' << i << ' ' << m_TileCoverStart[k][i] << ' '
+      //          << m_TileCoverEnd[k][i] << std::endl;
       if ( ( beginCorner >= m_TileCoverStart[k][i] - 0.0001 ) &&
            ( beginCorner <= m_TileCoverEnd[k][i] + 0.0001 ) &&
            ( scanStartVal >= m_TileCoverStart[k][i] ) )
@@ -726,18 +726,11 @@ FillROI()
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
 
-          for(unsigned int m = 0; m < ImageDimension; m++ )
-          {
-              if ( clipTileIndex[m] < 0 )
-              {
-                  clipTileIndex[m] = 0;
-              }
-          }
-
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
-          //std::cout << "ROI: " << roi << std::endl;
+          std::cout << "ROI: " << roi << std::endl;
+          std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
