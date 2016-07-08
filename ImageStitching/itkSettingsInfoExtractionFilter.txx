@@ -694,13 +694,13 @@ FillROI()
           currentTileOrigin[1] = m_TileCoverStart[1][j];
           currentTileOrigin[2] = m_TileCoverStart[2][k];
 
-          std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
+          //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
           clipTileOrigin[0] = m_TileCoverStartClipped[0][i];
           clipTileOrigin[1] = m_TileCoverStartClipped[1][j];
           clipTileOrigin[2] = m_TileCoverStartClipped[2][k];
 
-          std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
+          //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
           clipTileSize[0] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[0][i] - m_TileCoverStartClipped[0][i] )/m_TileSpacing[0] );
@@ -709,12 +709,12 @@ FillROI()
           clipTileSize[2] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[2][k] - m_TileCoverStartClipped[2][k] )/m_TileSpacing[2] );
 
-          std::cout << "Clip Tile Size " << clipTileSize << std::endl;
+          //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
           ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
           tileImage->SetOrigin( currentTileOrigin );
 
-          std::cout << "Extraction complete" << std::endl;
+          //std::cout << "Extraction complete" << std::endl;
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
 
@@ -729,7 +729,7 @@ FillROI()
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
-          std::cout << "ROI: " << roi << std::endl;
+          //std::cout << "ROI: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
