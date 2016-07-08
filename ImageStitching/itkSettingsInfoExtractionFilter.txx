@@ -734,7 +734,6 @@ FillROI()
 
           for( unsigned int m = 0; m < ImageDimension; m++ )
           {
-            std::cout << clipTileIndex[m] + clipTileSize[m] << ' ' << m_TileDimension[m] << std::endl;
             if ( clipTileIndex[m] + clipTileSize[m] > m_TileDimension[m] )
             {
               clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m] - 1;
