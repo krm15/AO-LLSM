@@ -334,7 +334,7 @@ UpdateFileNameLookup( std::istream& os )
           if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
                ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
           {
-            std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
+            //std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
             filename2 << m_TileDirectory << filename;
             m_TileFileNameArray[i][j][k] = filename2.str();
 

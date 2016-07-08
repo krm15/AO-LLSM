@@ -151,12 +151,13 @@ int main ( int argc, char* argv[] )
       for( unsigned int k = 0; k < tileNumber[2]; k++ )
       {
         filename = settingsReader->GetTileFileNameArray()[i][j][k];
-        std::cout << "Filename: " << filename << std::endl;
-        std::stringstream  filename3;
 
-        ReaderType::Pointer reader = ReaderType::New();
-        reader->SetFileName ( filename.c_str() );
-        reader->Update();
+        //std::cout << "Filename: " << filename << std::endl;
+        if ( !filename.empty() )
+        {
+          ReaderType::Pointer reader = ReaderType::New();
+          reader->SetFileName ( filename.c_str() );
+          reader->Update();
 
 //        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
 //        pAFilter->SetInput( reader->GetOutput() );
@@ -183,18 +184,20 @@ int main ( int argc, char* argv[] )
 //        caster->SetInput( currentImage );//rescale->GetOutput()
 //        caster->Update();
 
-        unsigned int lastindex1 = filename.find_last_of( "/" );
-        unsigned int lastindex2 = filename.find_last_of( "." );
-        std::string rawname = filename.substr( lastindex1+1, lastindex2 - lastindex1 -1 );
-        std::cout << rawname << std::endl;
-        filename3 << argv[3] << rawname << ".mha";
-        std::cout << filename3.str().c_str() << std::endl;
+          std::stringstream  filename3;
+          unsigned int lastindex1 = filename.find_last_of( "/" );
+          unsigned int lastindex2 = filename.find_last_of( "." );
+          std::string rawname = filename.substr( lastindex1+1, lastindex2 - lastindex1 -1 );
+          std::cout << rawname << std::endl;
+          filename3 << argv[3] << rawname << ".mha";
+          std::cout << filename3.str().c_str() << std::endl;
 
-        WriterType::Pointer writer = WriterType::New();
-        writer->SetFileName( filename3.str().c_str() );
-        writer->SetInput( reader->GetOutput() );
-        //writer->UseCompressionOn();
-        writer->Update();
+          WriterType::Pointer writer = WriterType::New();
+          writer->SetFileName( filename3.str().c_str() );
+          writer->SetInput( reader->GetOutput() );
+          //writer->UseCompressionOn();
+          writer->Update();
+        }
       }
     }
   }
