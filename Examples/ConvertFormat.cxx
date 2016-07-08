@@ -144,12 +144,13 @@ int main ( int argc, char* argv[] )
   axesOrder[1] = 0;
   axesOrder[2] = 2;
 
-  for( unsigned int i = 0; i < tileNumber[0]; i++ )
+  for( unsigned int k = 0; k < tileNumber[2]; k++ )
   {
-    for( unsigned int j = 0; j < tileNumber[1]; j++ )
+    for( unsigned int i = 0; i < tileNumber[0]; i++ )
     {
-      for( unsigned int k = 0; k < tileNumber[2]; k++ )
-      {
+       for( unsigned int j = 0; j < tileNumber[1]; j++ )
+       {
+
         filename = settingsReader->GetTileFileNameArray()[i][j][k];
 
         //std::cout << "Filename: " << filename << std::endl;
