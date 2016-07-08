@@ -732,21 +732,20 @@ FillROI()
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
 
-          roi.SetSize( clipTileSize );
-          roi.SetIndex( clipTileIndex );
-
-          std::cout << "ROI: " << roi << std::endl;
-          std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
-
           for( unsigned int m = 0; m < ImageDimension; m++ )
           {
             std::cout << clipTileIndex[m] + clipTileSize[m] << ' ' << m_TileDimension[m] << std::endl;
             if ( clipTileIndex[m] + clipTileSize[m] > m_TileDimension[m] )
             {
-              clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m];
+              clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m] - 1;
             }
           }
+
+          roi.SetSize( clipTileSize );
+          roi.SetIndex( clipTileIndex );
+
           std::cout << "ROI: " << roi << std::endl;
+          std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
