@@ -658,13 +658,7 @@ AllocateROI()
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
-  ThreadStruct str;
-  str.Filter  = this;
-
-  ThreaderPointer threader = ThreaderType::New();
-  threader->SetNumberOfThreads( m_NumberOfThreads );
-  threader->SetSingleMethod( this->ThreaderCallback, &str );
-  threader->SingleMethodExecute();
+  FillROI();
 
   BlendingNormalization();
   std::cout << "ROI filled" << std::endl;
@@ -672,81 +666,10 @@ AllocateROI()
 
 
 template < class TValueType, class TInputImage >
-ITK_THREAD_RETURN_TYPE
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
-ThreaderCallback(void * arg)
-{
-  unsigned int ThreadId = ((MultiThreader::ThreadInfoStruct *)(arg))->ThreadID;
-  ThreadId++;
-
-  ThreadStruct * str =
-  (ThreadStruct *) (((MultiThreader::ThreadInfoStruct *)(arg))->UserData);
-
-  unsigned int sz = 1;
-  sz *= ( str->Filter->m_ScanEnd[0] - str->Filter->m_ScanStart[0] + 1 );
-  sz *= ( str->Filter->m_ScanEnd[1] - str->Filter->m_ScanStart[1] + 1 );
-  sz *= ( str->Filter->m_ScanEnd[2] - str->Filter->m_ScanStart[2] + 1 );
-  sz--;
-
-  //m_MutexSIEF.Lock();
-  //std::cout << "Starting thread ID = " << ThreadId << std::endl;
-  //m_MutexSIEF.Unlock();
-
-  unsigned int numOfThreads = str->Filter->m_NumberOfThreads;
-
-  if ( (sz+1) < numOfThreads )
-  {
-    numOfThreads = sz+1;
-    if ( ThreadId > sz+1 )
-    {
-      //m_MutexSIEF.Lock();
-      //std::cout << "Ending null thread ID = " << ThreadId << std::endl;
-      //m_MutexSIEF.Unlock();
-
-      return ITK_THREAD_RETURN_VALUE;
-    }
-  }
-
-  unsigned int tileChunk = static_cast< unsigned int >( (sz+1)/numOfThreads);
-  unsigned int rem = (sz+1)%numOfThreads;
-
-  unsigned int startP, endP;
-  if ( ThreadId <= rem )
-  {
-    startP = (ThreadId-1) * (tileChunk+1);
-    endP = ThreadId * (tileChunk+1) - 1;
-  }
-  else
-  {
-    startP = (ThreadId-1) * (tileChunk) + rem;
-    endP = ThreadId * tileChunk - 1 + rem;
-  }
-
-  m_MutexSIEF.Lock();
-  std::cout << "Starting thread ID = " <<
-               ThreadId << ' ' << startP << ' ' << endP << std::endl;
-  m_MutexSIEF.Unlock();
-
-  str->Filter->FillROI( ThreadId - 1, startP, endP);
-
-  m_MutexSIEF.Lock();
-  std::cout << "Ending thread ID = " << ThreadId << std::endl;
-  m_MutexSIEF.Unlock();
-
-  return ITK_THREAD_RETURN_VALUE;
-}
-
-
-template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
+FillROI()
 {
-  unsigned int  sz2, sz1, sz0;
-  sz0 = ( m_ScanEnd[0] - m_ScanStart[0] + 1 );
-  sz1 = ( m_ScanEnd[1] - m_ScanStart[1] + 1 );
-  sz2 = ( m_ScanEnd[2] - m_ScanStart[2] + 1 );
-
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
   RegionType currentTileRegion, roiSubRegion;
@@ -755,58 +678,66 @@ FillROI( unsigned int threadId, unsigned int startP, unsigned int endP )
   IndexType clipTileIndex;
   PointType clipTileOrigin;
 
-  unsigned int index[3];
-  unsigned int quotient;
-  for( unsigned int sz = startP; sz <= endP; sz++ )
+  for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
   {
-    index[2] = m_ScanStart[2] + ( sz ) % ( sz2 );
-    quotient = static_cast<unsigned int>(sz/sz2);
-    index[1] = m_ScanStart[1] + ( quotient ) % ( sz1 );
-    index[0] = m_ScanStart[0] + static_cast<unsigned int>(quotient/sz1);
-    //std::cout << i << ' ' << j << ' ' << k << std::endl;
-
-    std::string filename = m_TileFileNameArray[index[0]][index[1]][index[2]];
-    //std::cout << filename.c_str() << std::endl;
-    if  ( ! filename.empty() )
+    for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
     {
-      for( unsigned int m = 0; m < ImageDimension; m++ )
+      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
       {
-        currentTileOrigin[m] = m_TileCoverStart[m][index[m]];
-        clipTileSize[m] = 1 + static_cast<SizeValueType>(
-                    ( m_TileCoverEndClipped[m][index[m]] - m_TileCoverStartClipped[m][index[m]] )/m_TileSpacing[m] );
-        clipTileOrigin[m] = m_TileCoverStartClipped[m][index[m]];
-      }
+        //std::cout << i << ' ' << j << ' ' << k << std::endl;
 
-      ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
-      tileImage->SetOrigin( currentTileOrigin );
+        std::string filename = m_TileFileNameArray[i][j][k];
+        //std::cout << filename.c_str() << std::endl;
+        if  ( ! filename.empty() )
+        {
+          currentTileOrigin[0] = m_TileCoverStart[0][i];
+          currentTileOrigin[1] = m_TileCoverStart[1][j];
+          currentTileOrigin[2] = m_TileCoverStart[2][k];
 
-      tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
-      roi.SetSize( clipTileSize );
-      roi.SetIndex( clipTileIndex );
+          clipTileOrigin[0] = m_TileCoverStartClipped[0][i];
+          clipTileOrigin[1] = m_TileCoverStartClipped[1][j];
+          clipTileOrigin[2] = m_TileCoverStartClipped[2][k];
 
-      // Extract ROI
-      ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
-      roiFilter->SetRegionOfInterest( roi );
-      roiFilter->SetInput( tileImage );
-      roiFilter->Update();
-      ImagePointer currentImage = roiFilter->GetOutput();
-      currentImage->DisconnectPipeline();
+          clipTileSize[0] = 1 + static_cast<SizeValueType>(
+                        ( m_TileCoverEndClipped[0][i] - m_TileCoverStartClipped[0][i] )/m_TileSpacing[0] );
+          clipTileSize[1] = 1 + static_cast<SizeValueType>(
+                        ( m_TileCoverEndClipped[1][j] - m_TileCoverStartClipped[1][j] )/m_TileSpacing[1] );
+          clipTileSize[2] = 1 + static_cast<SizeValueType>(
+                        ( m_TileCoverEndClipped[2][k] - m_TileCoverStartClipped[2][k] )/m_TileSpacing[2] );
 
-      OverlapRegion( currentImage , m_ROIImage,
-                     currentTileRegion, roiSubRegion );
 
-      // Using these images, fill up roiImage
-      IteratorType rIt( m_ROIImage, roiSubRegion );
-      rIt.GoToBegin();
-      IteratorType tIt( currentImage, currentTileRegion );
-      tIt.GoToBegin();
+          ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
+          tileImage->SetOrigin( currentTileOrigin );
 
-      PixelType p;
-      while( !tIt.IsAtEnd() )
-      {
-        rIt.Set( tIt.Get() );//rIt.Get() +
-        ++tIt;
-        ++rIt;
+          tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
+          roi.SetSize( clipTileSize );
+          roi.SetIndex( clipTileIndex );
+
+          // Extract ROI
+          ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
+          roiFilter->SetRegionOfInterest( roi );
+          roiFilter->SetInput( tileImage );
+          roiFilter->Update();
+          ImagePointer currentImage = roiFilter->GetOutput();
+          currentImage->DisconnectPipeline();
+
+          OverlapRegion( currentImage , m_ROIImage,
+                         currentTileRegion, roiSubRegion );
+
+          // Using these images, fill up roiImage
+          IteratorType rIt( m_ROIImage, roiSubRegion );
+          rIt.GoToBegin();
+          IteratorType tIt( currentImage, currentTileRegion );
+          tIt.GoToBegin();
+
+          PixelType p;
+          while( !tIt.IsAtEnd() )
+          {
+            rIt.Set( tIt.Get() );//rIt.Get() +
+            ++tIt;
+            ++rIt;
+          }
+        }
       }
     }
   }

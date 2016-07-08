@@ -145,9 +145,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef ImageFileWriter< OutputImageType > WriterType;
   typedef typename WriterType::Pointer WriterPointer;
 
-  typedef MultiThreader ThreaderType;
-  typedef typename ThreaderType::Pointer ThreaderPointer;
-
   void Read();
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
@@ -207,20 +204,12 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
-  void FillROI( unsigned int threadId,
-                unsigned int startP, unsigned int endP );
+  void FillROI();
   void OverlapRegion( ImagePointer A, ImagePointer B,
                       RegionType& rA, RegionType& rB );
   void ReadCorrectionImage();
   void BlendingNormalization();
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
-
-  static ITK_THREAD_RETURN_TYPE ThreaderCallback(void * arg);
-
-  struct ThreadStruct
-  {
-    Self*                 Filter;
-  };
 
 
   std::string   m_Path;
