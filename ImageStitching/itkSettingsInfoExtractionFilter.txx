@@ -680,7 +680,7 @@ FillROI()
 {
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
-  RegionType currentTileRegion, roiSubRegion;
+  RegionType currentTileRegion, currentTileOverlapRegion, roiOverlapRegion;
   RegionType roi;
   SizeType clipTileSize;
   IndexType clipTileIndex;
@@ -748,28 +748,30 @@ FillROI()
           roiFilter->Update();
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
+          currentTileRegion = currentImage->GetLargestPossibleRegion();
 
           //std::cout << "ROI filtering complete " << std::endl;
 
           OverlapRegion( currentImage , m_ROIImage,
-                         currentTileRegion, roiSubRegion );
+                         currentTileOverlapRegion, roiOverlapRegion );
 
           std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
           std::cout << "ROI extent: " << m_ROI << std::endl;
-          std::cout << "ROI Image region: " << roiSubRegion << std::endl;
+          std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
 
 
           std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
           std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
-          std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
+          std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
 
           // Using these images, fill up roiImage
 
-          if ( m_ROI.IsInside( roiSubRegion ) )
+          if ( m_ROI.IsInside( roiOverlapRegion ) &&
+               currentTileRegion.IsInside( currentTileOverlapRegion ) )
           {
-            IteratorType rIt( m_ROIImage, roiSubRegion );
+            IteratorType rIt( m_ROIImage, roiOverlapRegion );
             rIt.GoToBegin();
-            IteratorType tIt( currentImage, currentTileRegion );
+            IteratorType tIt( currentImage, currentTileOverlapRegion );
             tIt.GoToBegin();
 
             PixelType p;
