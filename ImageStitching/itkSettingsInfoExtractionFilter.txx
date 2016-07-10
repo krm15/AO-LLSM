@@ -702,13 +702,13 @@ FillROI()
           currentTileOrigin[1] = m_TileCoverStart[1][j];
           currentTileOrigin[2] = m_TileCoverStart[2][k];
 
-          std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
+          //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
           clipTileOrigin[0] = m_TileCoverStartClipped[0][i];
           clipTileOrigin[1] = m_TileCoverStartClipped[1][j];
           clipTileOrigin[2] = m_TileCoverStartClipped[2][k];
 
-          std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
+          //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
           clipTileSize[0] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[0][i] - m_TileCoverStartClipped[0][i] )/m_TileSpacing[0] );
@@ -755,8 +755,12 @@ FillROI()
                          currentTileRegion, roiSubRegion );
 
           std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
-          std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+          std::cout << "ROI extent: " << m_ROI << std::endl;
           std::cout << "ROI Image region: " << roiSubRegion << std::endl;
+
+
+          std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+          std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
           std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
 
           // Using these images, fill up roiImage
