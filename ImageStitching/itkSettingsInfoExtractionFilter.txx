@@ -717,12 +717,12 @@ FillROI()
           clipTileSize[2] = 1 + static_cast<SizeValueType>(
                         ( m_TileCoverEndClipped[2][k] - m_TileCoverStartClipped[2][k] )/m_TileSpacing[2] );
 
-          std::cout << "Clip Tile Size " << clipTileSize << std::endl;
+          //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
           ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
           tileImage->SetOrigin( currentTileOrigin );
 
-          std::cout << "Extraction complete" << std::endl;
+          //std::cout << "Extraction complete" << std::endl;
 
           tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
 
@@ -738,8 +738,8 @@ FillROI()
           roi.SetIndex( clipTileIndex );
 
 
-          std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
-          std::cout << "roi for extraction: " << roi << std::endl;
+          //std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
+          //std::cout << "Clip tile roi: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
@@ -749,13 +749,14 @@ FillROI()
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
 
-          std::cout << "ROI filtering complete " << std::endl;
+          //std::cout << "ROI filtering complete " << std::endl;
 
           OverlapRegion( currentImage , m_ROIImage,
                          currentTileRegion, roiSubRegion );
 
-          std::cout << "Roi Region: " << roiSubRegion << std::endl;
-
+          std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
+          std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+          std::cout << "ROI Image region: " << roiSubRegion << std::endl;
           std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
 
           // Using these images, fill up roiImage
