@@ -695,7 +695,7 @@ FillROI()
         //std::cout << i << ' ' << j << ' ' << k << std::endl;
 
         std::string filename = m_TileFileNameArray[i][j][k];
-        std::cout << filename.c_str() << std::endl;
+        //std::cout << filename.c_str() << std::endl;
         if  ( ! filename.empty() )
         {
           currentTileOrigin[0] = m_TileCoverStart[0][i];
@@ -755,14 +755,13 @@ FillROI()
           OverlapRegion( currentImage , m_ROIImage,
                          currentTileOverlapRegion, roiOverlapRegion );
 
-          std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
-          std::cout << "ROI extent: " << m_ROI << std::endl;
-          std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
+          //std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
+          //std::cout << "ROI extent: " << m_ROI << std::endl;
+          //std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
 
-
-          std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
-          std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
-          std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
+          //std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+          //std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
+          //std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
 
           // Using these images, fill up roiImage
 
