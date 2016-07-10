@@ -1,10 +1,4 @@
 /*=========================================================================
-  Author: $Author: krm15 $  // Author of last commit
-  Version: $Rev: 667 $  // Revision of last commit
-  Date: $Date: 2009-09-16 13:12:21 -0400 (Wed, 16 Sep 2009) $  // Date of last commit
-=========================================================================*/
-
-/*=========================================================================
  Authors: The GoFigure Dev. Team.
  at Megason Lab, Systems biology, Harvard Medical school, 2009
 
