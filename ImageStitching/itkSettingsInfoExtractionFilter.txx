@@ -737,8 +737,9 @@ FillROI()
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
-          std::cout << "ROI: " << roi << std::endl;
+
           std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
+          std::cout << "roi for extraction: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
@@ -748,7 +749,7 @@ FillROI()
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
 
-          //std::cout << "ROI extraction complete " << std::endl;
+          std::cout << "ROI filtering complete " << std::endl;
 
           OverlapRegion( currentImage , m_ROIImage,
                          currentTileRegion, roiSubRegion );
