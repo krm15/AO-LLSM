@@ -104,6 +104,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
   opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
+  opt->addUsage( " -x   --exp     ch  (default) string marking channel information" );
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -124,9 +125,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "thresh",  't' );
   opt->setOption(  "var",     'v' );
   opt->setOption(  "threads", 'n' );
-
-  /* a flag (takes no argument), supporting only short form */
-   opt->setFlag( 'c' );
+  opt->setOption(  "x", 'exp' );
 
   /* for options that will be checked only on the command and line not in
   option/resource file */
@@ -156,6 +155,7 @@ int main ( int argc, char* argv[] )
   unsigned int zStart = 0;
   unsigned int zEnd = 10;
   std::string lsMap = "/Users/kishoremosaliganti/Dropbox/DataForKishore/LS_measurement/";
+  std::string searchCH;
   double thresh = 104.0;
   double var = 100.0;
   unsigned int numOfThreads = 1;
@@ -205,11 +205,16 @@ int main ( int argc, char* argv[] )
     numOfThreads = atof( opt->getValue( 'n' ) );
     numOfThreads = 1;
   }
+  if( opt->getValue( 'x' ) != NULL  || opt->getValue( "exp" ) != NULL  )
+  {
+    searchCH = opt->getValue( 'x' );
+  }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( ch );
+  settingsReader->SetChannelPrefix( searchCH );
   settingsReader->SetTimePoint( tp );
 
   if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
