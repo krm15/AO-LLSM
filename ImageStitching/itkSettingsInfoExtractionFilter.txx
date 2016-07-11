@@ -1,10 +1,4 @@
 /*=========================================================================
-  Author: $Author: krm15 $  // Author of last commit
-  Version: $Rev: 1658 $  // Revision of last commit
-  Date: $Date: 2010-06-14 15:49:25 -0400 (Mon, 14 Jun 2010) $  // Date of last commit
-=========================================================================*/
-
-/*=========================================================================
  Authors: The GoFigure Dev. Team.
  at Megason Lab, Systems biology, Harvard Medical school, 2009
 
@@ -129,10 +123,18 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverEnd[i].resize( m_TileNumber[i] );
     m_TileCoverStartClipped[i].resize( m_TileNumber[i] );
     m_TileCoverEndClipped[i].resize( m_TileNumber[i] );
+    m_TileOffset[i].resize( m_TileNumber[i] );
+    m_TileEffectiveOffset[i].resize( m_TileNumber[i] );
   }
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
+    for( unsigned int i = 0; i < m_TileNumber[i]; i++ )
+    {
+      m_TileOffset[j][i] = 0.0;
+      m_TileEffectiveOffset[j][i] = 0.0;
+    }
+
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
@@ -141,13 +143,13 @@ UpdateTileCoverage( std::istream& os )
     }
   }
 
-
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
     m_MinimumStart[j] = 1000000.0;
-    m_MaximumEnd[j]   = -1000000.0;
+    m_MaximumEnd[j]   = -m_MinimumStart[j];
     for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
     {
+      // Clipping should be based on offsets as well
       m_TileCoverStartClipped[j][k] = m_TileCoverStart[j][k]
           + 0.5*m_TileOverlap[j];
       m_TileCoverEndClipped[j][k] = m_TileCoverEnd[j][k]
@@ -185,19 +187,6 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverStartClipped[j][firstTile] = m_MinimumStart[j];
     m_TileCoverEndClipped[j][lastTile] = m_MaximumEnd[j];
   }
-}
-
-
-template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
-UpdateStitchDimensions( std::istream& os )
-{
-//  for( unsigned int i = 0; i < ImageDimension; i++ )
-//  {
-//    m_MinimumStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
-//    m_MaximumEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
-//  }
 }
 
 
@@ -686,7 +675,7 @@ FillROI()
 {
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
-  RegionType currentTileRegion, roiSubRegion;
+  RegionType currentTileRegion, currentTileOverlapRegion, roiOverlapRegion;
   RegionType roi;
   SizeType clipTileSize;
   IndexType clipTileIndex;
@@ -743,8 +732,9 @@ FillROI()
           roi.SetSize( clipTileSize );
           roi.SetIndex( clipTileIndex );
 
-          //std::cout << "ROI: " << roi << std::endl;
+
           //std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
+          //std::cout << "Clip tile roi: " << roi << std::endl;
 
           // Extract ROI
           ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
@@ -753,28 +743,38 @@ FillROI()
           roiFilter->Update();
           ImagePointer currentImage = roiFilter->GetOutput();
           currentImage->DisconnectPipeline();
+          currentTileRegion = currentImage->GetLargestPossibleRegion();
 
-          //std::cout << "ROI extraction complete " << std::endl;
+          //std::cout << "ROI filtering complete " << std::endl;
 
           OverlapRegion( currentImage , m_ROIImage,
-                         currentTileRegion, roiSubRegion );
+                         currentTileOverlapRegion, roiOverlapRegion );
 
-          //std::cout << "Roi Region: " << roiSubRegion << std::endl;
+          //std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
+          //std::cout << "ROI extent: " << m_ROI << std::endl;
+          //std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
 
-          //std::cout << "Current Tile Region: " << currentTileRegion << std::endl;
+          //std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+          //std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
+          //std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
 
           // Using these images, fill up roiImage
-          IteratorType rIt( m_ROIImage, roiSubRegion );
-          rIt.GoToBegin();
-          IteratorType tIt( currentImage, currentTileRegion );
-          tIt.GoToBegin();
 
-          PixelType p;
-          while( !tIt.IsAtEnd() )
-          {
-            rIt.Set( tIt.Get() );//rIt.Get() +
-            ++tIt;
-            ++rIt;
+          if ( m_ROI.IsInside( roiOverlapRegion ) &&
+               currentTileRegion.IsInside( currentTileOverlapRegion ) )
+          {// Clipping may eliminate overlap
+            IteratorType rIt( m_ROIImage, roiOverlapRegion );
+            rIt.GoToBegin();
+            IteratorType tIt( currentImage, currentTileOverlapRegion );
+            tIt.GoToBegin();
+
+            PixelType p;
+            while( !tIt.IsAtEnd() )
+            {
+              rIt.Set( tIt.Get() );//rIt.Get() +
+              ++tIt;
+              ++rIt;
+            }
           }
         }
       }
