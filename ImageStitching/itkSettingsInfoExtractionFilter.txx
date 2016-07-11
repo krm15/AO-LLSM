@@ -123,10 +123,18 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverEnd[i].resize( m_TileNumber[i] );
     m_TileCoverStartClipped[i].resize( m_TileNumber[i] );
     m_TileCoverEndClipped[i].resize( m_TileNumber[i] );
+    m_TileOffset[i].resize( m_TileNumber[i] );
+    m_TileEffectiveOffset[i].resize( m_TileNumber[i] );
   }
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
+    for( unsigned int i = 0; i < m_TileNumber[i]; i++ )
+    {
+      m_TileOffset[j][i] = 0.0;
+      m_TileEffectiveOffset[j][i] = 0.0;
+    }
+
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
       unsigned int temp =  m_TileInfoValue[i][j];
@@ -135,13 +143,13 @@ UpdateTileCoverage( std::istream& os )
     }
   }
 
-
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
     m_MinimumStart[j] = 1000000.0;
-    m_MaximumEnd[j]   = -1000000.0;
+    m_MaximumEnd[j]   = -m_MinimumStart[j];
     for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
     {
+      // Clipping should be based on offsets as well
       m_TileCoverStartClipped[j][k] = m_TileCoverStart[j][k]
           + 0.5*m_TileOverlap[j];
       m_TileCoverEndClipped[j][k] = m_TileCoverEnd[j][k]
@@ -179,19 +187,6 @@ UpdateTileCoverage( std::istream& os )
     m_TileCoverStartClipped[j][firstTile] = m_MinimumStart[j];
     m_TileCoverEndClipped[j][lastTile] = m_MaximumEnd[j];
   }
-}
-
-
-template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
-UpdateStitchDimensions( std::istream& os )
-{
-//  for( unsigned int i = 0; i < ImageDimension; i++ )
-//  {
-//    m_MinimumStart[i] = m_TransformedTileInfoValue.get_column(i+3).min_value();
-//    m_MaximumEnd[i] = m_TransformedTileInfoValue.get_column(i+6).max_value();
-//  }
 }
 
 
@@ -767,7 +762,7 @@ FillROI()
 
           if ( m_ROI.IsInside( roiOverlapRegion ) &&
                currentTileRegion.IsInside( currentTileOverlapRegion ) )
-          {
+          {// Clipping may eliminate overlap
             IteratorType rIt( m_ROIImage, roiOverlapRegion );
             rIt.GoToBegin();
             IteratorType tIt( currentImage, currentTileOverlapRegion );

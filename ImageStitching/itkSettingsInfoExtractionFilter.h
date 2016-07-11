@@ -200,7 +200,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   SettingsInfoExtractionFilter();
   ~SettingsInfoExtractionFilter() {}
 
-  void UpdateStitchDimensions( std::istream& os );
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
@@ -240,6 +239,9 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   DoubleVectorType  m_TileCoverEnd[3];
   DoubleVectorType  m_TileCoverStartClipped[3];
   DoubleVectorType  m_TileCoverEndClipped[3];
+  DoubleVectorType  m_TileOffset[3];
+  DoubleVectorType  m_TileEffectiveOffset[3];
+
   unsigned int      m_ScanStart[3];
   unsigned int      m_ScanEnd[3];
 
