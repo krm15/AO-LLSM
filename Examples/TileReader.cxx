@@ -96,9 +96,9 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
-  opt->addUsage( " -d   --darkLevel 30  (default) correction threshold" );
+  opt->addUsage( " -d   --darkLevel 30 (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
-  opt->addUsage( " -x   --exp     ch  (default) string marking channel information" );
+  opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -119,7 +119,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "thresh",  't' );
   opt->setOption(  "var",     'v' );
   opt->setOption(  "threads", 'n' );
-  opt->setOption(  "x", 'exp' );
+  opt->setOption(  "exp",     'x' );
 
   /* for options that will be checked only on the command and line not in
   option/resource file */
@@ -149,7 +149,7 @@ int main ( int argc, char* argv[] )
   unsigned int zStart = 0;
   unsigned int zEnd = 10;
   std::string lsMap = "/Users/kishoremosaliganti/Dropbox/DataForKishore/LS_measurement/";
-  std::string searchCH;
+  std::string searchCH = "_ch";
   double thresh = 104.0;
   double var = 100.0;
   unsigned int numOfThreads = 1;

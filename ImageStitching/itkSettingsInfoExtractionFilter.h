@@ -191,6 +191,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
   itkSetMacro( CorrectionDirectory, std::string );
+  itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
   itkSetMacro( NumberOfThreads,     unsigned int );
@@ -219,6 +220,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   std::string   m_SampleName;
   unsigned int  m_ChannelNumber;
   unsigned int  m_TimePoint;
+  std::string   m_ChannelPrefix;
 
   unsigned int      m_Dimension;
   StringVectorType  m_SettingFieldName;

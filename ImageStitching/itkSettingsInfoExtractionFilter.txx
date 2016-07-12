@@ -58,6 +58,7 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_ROIOverlapImage = ITK_NULLPTR;
   m_CorrectionDirectory = "";
   m_NumberOfThreads = 1;
+  m_ChannelPrefix = "_ch";
 }
 
 
@@ -320,7 +321,7 @@ UpdateFileNameLookup( std::istream& os )
       for( unsigned int k = 0; k < m_TileNumber[2]; k++ )
       {
         m_TileFileNameArray[i][j][k] = std::string();
-        searchStringCH << "_ch" << m_ChannelNumber;
+        searchStringCH << m_ChannelPrefix << m_ChannelNumber;
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
