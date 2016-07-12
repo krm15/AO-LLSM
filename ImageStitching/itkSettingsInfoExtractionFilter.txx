@@ -130,7 +130,7 @@ UpdateTileCoverage( std::istream& os )
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    for( unsigned int i = 0; i < m_TileNumber[i]; i++ )
+    for( unsigned int i = 0; i < m_TileNumber[j]; i++ )
     {
       m_TileOffset[j][i] = 0.0;
       m_TileEffectiveOffset[j][i] = 0.0;
