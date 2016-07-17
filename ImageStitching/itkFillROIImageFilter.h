@@ -105,6 +105,12 @@ public:
 
   itkSetObjectMacro( SharedData, SharedDataType );
 
+  void SetZTile( unsigned int& ztile  )
+  {
+    m_ZTile = ztile;
+    m_SingleZFill = true;
+  }
+
 protected:
   FillROIImageFilter();
   ~FillROIImageFilter(){}
@@ -119,11 +125,12 @@ protected:
 
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
 
-  unsigned int  m_DeconvolutionIterations;
   SharedDataPointer m_SharedData;
   IndexType m_ScanStart;
   IndexType m_ScanEnd;
   unsigned int m_NumOfValidThreads;
+  unsigned int      m_ZTile;
+  bool m_SingleZFill;
 
 private:
   FillROIImageFilter(const Self&) {}

@@ -54,6 +54,7 @@
 #include "itkResampleImageFilter.h"
 #include <itkMaximumProjectionImageFilter.h>
 #include "itkFillROIImageFilter.h"
+#include "itkStitchingSharedData.h"
 #include "anyoption.h"
 
 int main ( int argc, char* argv[] )
@@ -91,6 +92,7 @@ int main ( int argc, char* argv[] )
   typedef itk::MaximumProjectionImageFilter< ImageType, RImageType > MIPFilterType;
 
   typedef itk::FillROIImageFilter< ImageType > FillROIFilterType;
+  typedef itk::StitchingSharedData< ImageType > SharedDataType;
 
   /* 1. CREATE AN OBJECT */
   AnyOption *opt = new AnyOption();
@@ -115,7 +117,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -s   --zstart  0   (default) z start plane" );
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
-  opt->addUsage( " -l   --lsMap   ~/  (default) correction directory" );
+  opt->addUsage( " -l   --lsMap       (default) correction filename" );
   opt->addUsage( " -d   --darkLevel 30 (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
@@ -123,8 +125,6 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -p   --sxy     1   (default) subsampling rate in X/Y" );
   opt->addUsage( " -q   --sz      1   (default) subsampling rate in Z" );
   opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
-  opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
-
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -136,7 +136,6 @@ int main ( int argc, char* argv[] )
   opt->setFlag(  "help",  'h' );
   opt->setFlag(  "blend", 'b' );
   opt->setFlag(  "mip",   'm' );
-  opt->setFlag(  "reg",   'r' );
 
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
@@ -242,58 +241,27 @@ int main ( int argc, char* argv[] )
     subsample = true;
   }
 
+  SharedDataType::Pointer m_SharedData = SharedDataType::New();
+
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( ch );
   settingsReader->SetChannelPrefix( searchCH );
   settingsReader->SetTimePoint( tp );
+  settingsReader->SetSharedData( m_SharedData );
 
-  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
-  {
-    lsMap = opt->getValue( 'l' );
-    settingsReader->SetCorrectionDirectory( lsMap );
-    settingsReader->SetCorrectionThreshold( thresh );
-    settingsReader->SetCorrectionVariance( var );
-  }
   if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
   {
     OffsetFilePath = opt->getValue( 'o' );
     settingsReader->SetOffsetFile( OffsetFilePath );
   }
-
-
-  if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
-  {
-    settingsReader->SetBlending( 0 );//1
-  }
-  else
-  {
-    settingsReader->SetBlending( 0 );
-  }
-
   if( opt->getFlag( "mip" ) || opt->getFlag( 'm' ) )
   {
     mip = true;
   }
 
-  if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )
-  {
-    settingsReader->SetRegisterZTiles( 1 );
-  }
-  else
-  {
-    settingsReader->SetRegisterZTiles( 0 );
-  }
-
   settingsReader->Read();
-
-  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "deconv" ) != NULL  )
-  {
-    PSFImagePath = opt->getValue( 'd' );
-    settingsReader->SetPSFPath( PSFImagePath );
-    settingsReader->SetDeconvolutionIterations( 15 );
-  }
 
   StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
   DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();
@@ -309,6 +277,25 @@ int main ( int argc, char* argv[] )
   SizeType tilePixelDimension = settingsReader->GetTileDimension();
   SpacingType spacing = settingsReader->GetTileSpacing();
 
+  m_SharedData->SetTileDimension( tilePixelDimension );
+  m_SharedData->SetTileSpacing( spacing );
+
+  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "deconv" ) != NULL  )
+  {
+    PSFImagePath = opt->getValue( 'd' );
+    m_SharedData->SetPSFPath( PSFImagePath );
+    m_SharedData->SetDeconvolutionIterations( 15 );
+    m_SharedData->ReadPSFImage();
+    std::cout << "Read PSF image" << std::endl;
+  }
+
+  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "lsMap" ) != NULL  )
+  {
+    lsMap = opt->getValue( 'l' );
+    m_SharedData->SetCorrectionInfo( lsMap, var, thresh );
+    std::cout << "Read Correction map" << std::endl;
+  }
+
   std::cout << "Number of tiles " << numOfTiles << std::endl;
   std::cout << "Tile number" << std::endl;
   std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' '
@@ -321,8 +308,7 @@ int main ( int argc, char* argv[] )
   std::cout << "Tile spacing" << std::endl;
   std::cout << spacing << std::endl;
 
-
-  settingsReader->CreateStitchedImage();
+  //settingsReader->CreateStitchedImage();
 
   ImageType::PointType sOrigin = settingsReader->GetStitchOrigin();
 
@@ -371,13 +357,23 @@ int main ( int argc, char* argv[] )
   m_ROIImage->SetSpacing( spacing );
   m_ROIImage->SetRegions( roi );
   m_ROIImage->Allocate();
-  m_ROIImage->FillBuffer( 1.0 );
+  m_ROIImage->FillBuffer( 0.0 );
 
   FillROIFilterType::Pointer fillROI = FillROIFilterType::New();
   fillROI->SetInput( m_ROIImage );
-  fillROI->SetSharedData( settingsReader->GetSharedData() );
+  fillROI->SetSharedData( m_SharedData );
   fillROI->InPlaceOn();
   fillROI->SetNumberOfThreads( numOfThreads );
+
+  if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
+  {
+    //fillROI->SetBlending( 0 );//1
+  }
+  else
+  {
+    //fillROI->SetBlending( 0 );
+  }
+
   fillROI->Update();
 
   ImageType::SpacingType nspacing;

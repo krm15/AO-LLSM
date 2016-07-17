@@ -45,16 +45,16 @@ template< class TInputImage >
 FillROIImageFilter< TInputImage >
 ::FillROIImageFilter()
 {
-  m_DeconvolutionIterations = 15;
+  m_ZTile = 0;
+  m_SingleZFill = false;
   this->SetNumberOfRequiredInputs(1);
   Superclass::GenerateInputRequestedRegion();
 
   ImagePointer input = const_cast< ImageType * >( this->GetInput() );
   if ( input )
-    {
+  {
     input->SetRequestedRegion( input->GetLargestPossibleRegion() );
-    }
-
+  }
 }
 
 template< class TInputImage >
@@ -107,6 +107,7 @@ OverlapRegion( ImagePointer A, ImagePointer B,
   rB.SetSize( s );
 }
 
+
 template< class TInputImage >
 void
 FillROIImageFilter< TInputImage >::
@@ -116,6 +117,10 @@ BeforeThreadedGenerateData()
   this->AllocateOutputs();
   this->ReleaseDataFlagOn();
 
+  const ImageType *outputPtr = this->GetOutput();
+  const ImageRegionSplitterBase * splitter = this->GetImageRegionSplitter();
+  m_NumOfValidThreads = splitter->GetNumberOfSplits( outputPtr->GetRequestedRegion(), this->GetNumberOfThreads() );
+
   ImagePointer m_ROIImage = this->GetOutput();
   PointType m_ROIOrigin = m_ROIImage->GetOrigin();
   SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
@@ -124,9 +129,17 @@ BeforeThreadedGenerateData()
   unsigned int m_TileNumber[3];
   for( unsigned int k = 0; k < ImageDimension; k++ )
   {
+    m_ScanStart[k] = 0;
     m_TileNumber[k] = m_SharedData->m_TileCover[k][0][0].size();
+    m_ScanEnd[k] = m_TileNumber[k] - 1;
   }
   std::cout << "Allocated ROI image" << std::endl;
+
+  if ( m_SingleZFill )
+  {
+    m_ScanStart[2] = m_ScanEnd[2] = m_ZTile;
+    return;
+  }
 
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
@@ -168,11 +181,8 @@ BeforeThreadedGenerateData()
 
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
-
-  const ImageType *outputPtr = this->GetOutput();
-  const ImageRegionSplitterBase * splitter = this->GetImageRegionSplitter();
-  m_NumOfValidThreads = splitter->GetNumberOfSplits( outputPtr->GetRequestedRegion(), this->GetNumberOfThreads() );
 }
+
 
 template< class TInputImage >
 void
@@ -202,7 +212,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         //std::cout << i << ' ' << j << ' ' << k << std::endl;
         if ( counter%(m_NumOfValidThreads) == threadId )
         {
-          std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
+          //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
           //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
@@ -252,12 +262,16 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             //std::cout << "Clip tile roi: " << roi << std::endl;
 
             // Extract ROI
-            ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
-            roiFilter->SetRegionOfInterest( roi );
-            roiFilter->SetInput( tileImage );
-            roiFilter->Update();
-            ImagePointer currentImage = roiFilter->GetOutput();
-            currentImage->DisconnectPipeline();
+            ImagePointer currentImage = tileImage;
+            if ( !m_SingleZFill )
+            {
+              ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
+              roiFilter->SetRegionOfInterest( roi );
+              roiFilter->SetInput( tileImage );
+              roiFilter->Update();
+              currentImage = roiFilter->GetOutput();
+              currentImage->DisconnectPipeline();
+            }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
 
             //std::cout << "ROI filtering complete " << std::endl;
@@ -382,11 +396,12 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
   ImagePointer deconvImage;
   if ( m_SharedData->m_PSF )
   {
+    //std::cout << "Deconvolution used" << std::endl;
     DeconvolutionFilterPointer deconvolutionFilter = DeconvolutionFilterType::New();
     deconvolutionFilter->SetInput( currenTInputImage );
     deconvolutionFilter->SetKernelImage( m_SharedData->m_PSF );
     deconvolutionFilter->NormalizeOn();
-    deconvolutionFilter->SetNumberOfIterations( m_DeconvolutionIterations );
+    deconvolutionFilter->SetNumberOfIterations( m_SharedData->m_DeconvolutionIterations );
     deconvolutionFilter->Update();
     deconvImage = deconvolutionFilter->GetOutput();
     deconvImage->DisconnectPipeline();

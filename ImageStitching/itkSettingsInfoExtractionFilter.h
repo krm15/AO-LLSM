@@ -60,17 +60,15 @@
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
 #include "itkImageRegionIterator.h"
-#include "itkDiscreteGaussianImageFilter.h"
 #include "itkRegionOfInterestImageFilter.h"
-
-#include "itkPermuteAxesImageFilter.h"
-#include "itkRichardsonLucyDeconvolutionImageFilter.h"
 #include "itkStitchingSharedData.h"
+#include "itkFillROIImageFilter.h"
 
-#include "itkRescaleIntensityImageFilter.h"
-#include "itkCastImageFilter.h"
-#include "itkImageFileWriter.h"
-#include "itkMatrix.h"
+#include "itkImageRegistrationMethod.h"
+#include "itkTranslationTransform.h"
+#include "itkMeanSquaresImageToImageMetric.h"
+#include "itkRegularStepGradientDescentOptimizer.h"
+
 
 namespace itk
 {
@@ -106,11 +104,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef ImageFileReader< ImageType > ReaderType;
   typedef typename ReaderType::Pointer ReaderPointer;
   typedef itk::ImageRegionIterator< ImageType > IteratorType;
-  typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
-  typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
-
-  typedef RichardsonLucyDeconvolutionImageFilter< ImageType > DeconvolutionFilterType;
-  typedef typename DeconvolutionFilterType::Pointer DeconvolutionFilterPointer;
 
   typedef StitchingSharedData< ImageType > SharedDataType;
   typedef typename SharedDataType::Pointer SharedDataPointer;
@@ -124,41 +117,28 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef typename SizeType::SizeValueType SizeValueType;
   typedef std::vector< IndexType > IndexVectorType;
 
-  typedef Image< double, 2 > RImageType;
-  typedef typename RImageType::Pointer RImagePointer;
-  typedef ImageFileReader< RImageType > RReaderType;
-  typedef typename RReaderType::Pointer RReaderPointer;
-  typedef ImageRegionIterator< RImageType > RIteratorType;
-
-  typedef typename RImageType::SizeType RSizeType;
-  typedef typename RImageType::SpacingType RSpacingType;
-  typedef typename RImageType::IndexType RIndexType;
-  typedef typename RImageType::RegionType RRegionType;
-  typedef typename RImageType::PointType RPointType;
-
-  typedef DiscreteGaussianImageFilter< RImageType, RImageType > GaussianFilterType;
-  typedef typename GaussianFilterType::Pointer GaussianFilterPointer;
-
-  typedef RegionOfInterestImageFilter< RImageType, RImageType > ROIFilterType;
-  typedef typename ROIFilterType::Pointer ROIFilterPointer;
-
   typedef RegionOfInterestImageFilter< ImageType, ImageType > ROIFilter3DType;
   typedef typename ROIFilter3DType::Pointer ROIFilter3DPointer;
 
-  typedef Image< PixelType, 2 > OutputImageType;
-  typedef RescaleIntensityImageFilter< RImageType, RImageType > RescaleFilterType;
-  typedef typename RescaleFilterType::Pointer RescaleFilterPointer;
-  typedef CastImageFilter< RImageType, OutputImageType > CastFilterType;
-  typedef typename CastFilterType::Pointer CastFilterPointer;
-  typedef ImageFileWriter< OutputImageType > WriterType;
-  typedef typename WriterType::Pointer WriterPointer;
+  typedef FillROIImageFilter< ImageType > FillROIFilterType;
+  typedef typename FillROIFilterType::Pointer FillROIFilterPointer;
+
+  typedef TranslationTransform< double, ImageDimension > TransformType;
+  typedef typename TransformType::Pointer TransformPointer;
+  typedef RegularStepGradientDescentOptimizer       OptimizerType;
+  typedef typename OptimizerType::Pointer OptimizerPointer;
+  typedef MeanSquaresImageToImageMetric< ImageType, ImageType >    MetricType;
+  typedef typename MetricType::Pointer MetricPointer;
+  typedef LinearInterpolateImageFunction< ImageType, double > InterpolatorType;
+  typedef typename InterpolatorType::Pointer InterpolatorPointer;
+  typedef ImageRegistrationMethod< ImageType, ImageType > RegistrationType;
+  typedef typename RegistrationType::Pointer RegistrationPointer;
+  typedef typename RegistrationType::ParametersType ParametersType;
 
   void Read();
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
   void AllocateROI();
-  void ReadPSFImage();
-
 
   unsigned int * GetTileNumber()
   {
@@ -191,23 +171,15 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkGetConstMacro( StitchRegion,       RegionType );
   itkGetConstMacro( ChannelName,        std::string );
 
-  void SetCorrectionThreshold( ValueType& val )
-  {
-    m_SharedData->m_CorrectionThreshold = val;
-  }
-
-  itkSetMacro( CorrectionVariance,  ValueType );
-  itkSetMacro( Blending,            bool );
   itkSetMacro( RegisterZTiles,      bool );
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
-  itkSetMacro( CorrectionDirectory, std::string );
-  itkSetMacro( PSFPath,             std::string );
   itkSetMacro( OffsetFile,          std::string );
   itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
-  itkSetMacro( DeconvolutionIterations, unsigned int );
+  itkSetMacro( ZTile,               unsigned int );
+  itkSetObjectMacro( SharedData, SharedDataType );
 
   protected:
   SettingsInfoExtractionFilter();
@@ -217,10 +189,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
   void FillROI();
-  void OverlapRegion( ImagePointer A, ImagePointer B,
-                      RegionType& rA, RegionType& rB );
-  void ReadCorrectionImage();
-  void BlendingNormalization();
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
   void ReadOffsetFile();
   void WriteOffsetFile();
@@ -229,8 +197,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   std::string   m_Path;
   std::string   m_SettingsDirectory;
   std::string   m_TileDirectory;
-  std::string   m_CorrectionDirectory;
-  std::string   m_PSFPath;
   std::string   m_OffsetFile;
   std::string   m_ChannelName;
   std::string   m_SampleName;
@@ -258,6 +224,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   unsigned int      m_ScanStart[3];
   unsigned int      m_ScanEnd[3];
 
+
   vnlMatrixType m_TileInfoValue;
   vnlMatrixType m_TransformedTileInfoValue;
 
@@ -267,11 +234,9 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   SizeType      m_StitchDimension;
   IndexType     m_StitchIndex;
   RegionType    m_StitchRegion;
-  bool          m_Blending;
 
-  ValueType     m_CorrectionVariance;
-  unsigned int  m_DeconvolutionIterations;
-  bool          m_RegisterZTiles;
+  unsigned int      m_ZTile;
+  bool              m_RegisterZTiles;
   SharedDataPointer m_SharedData;
 
   private:

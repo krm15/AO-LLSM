@@ -13,5 +13,8 @@ TARGET_LINK_LIBRARIES(deconvolve ${ITK_LIBRARIES})
 ADD_EXECUTABLE( tileReader TileReader.cxx)
 TARGET_LINK_LIBRARIES( tileReader ${ITK_LIBRARIES} Option )
 
+ADD_EXECUTABLE( tileRegistration TileRegistration.cxx)
+TARGET_LINK_LIBRARIES( tileRegistration ${ITK_LIBRARIES} Option )
+
 ADD_EXECUTABLE( convertFormat ConvertFormat.cxx)
 TARGET_LINK_LIBRARIES( convertFormat ${ITK_LIBRARIES} Option )
