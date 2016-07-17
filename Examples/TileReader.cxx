@@ -38,12 +38,22 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
+
 #include "itkSettingsInfoExtractionFilter.h"
+
+#include "itkRichardsonLucyDeconvolutionImageFilter.h"
+
+#include "itkNearestNeighborInterpolateImageFunction.h"
+#include "itkAffineTransform.h"
+#include "itkResampleImageFilter.h"
+#include <itkMaximumProjectionImageFilter.h>
+#include "itkFillROIImageFilter.h"
 #include "anyoption.h"
 
 int main ( int argc, char* argv[] )
@@ -71,7 +81,16 @@ int main ( int argc, char* argv[] )
   typedef itk::Image< PixelType, 2 > RImageType;
   typedef itk::NumericSeriesFileNames NameGeneratorType;
   typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
+  typedef itk::ImageFileWriter< RImageType> RWriterType;
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
+
+  typedef itk::ResampleImageFilter< ImageType, ImageType > ResampleFilterType;
+  typedef itk::NearestNeighborInterpolateImageFunction< ImageType > InterpolatorType;
+  typedef itk::AffineTransform< double, Dimension > TransformType;
+
+  typedef itk::MaximumProjectionImageFilter< ImageType, RImageType > MIPFilterType;
+
+  typedef itk::FillROIImageFilter< ImageType > FillROIFilterType;
 
   /* 1. CREATE AN OBJECT */
   AnyOption *opt = new AnyOption();
@@ -89,7 +108,8 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " iTile directories " );
   opt->addUsage( " oStitched plane directories " );
   opt->addUsage( " -h   --help    Prints this help " );
-  opt->addUsage( " -b   --blend   Blends tiles at overlap " );
+  opt->addUsage( " -b   --blend   Off Blends tiles at overlap " );
+  opt->addUsage( " -m   --mip     Off MIP of stitched tiles " );
   opt->addUsage( " -c   --channel 0   (default) channel value" );
   opt->addUsage( " -t   --time    0   (default) timepoint" );
   opt->addUsage( " -s   --zstart  0   (default) z start plane" );
@@ -99,6 +119,12 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -d   --darkLevel 30 (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
+  opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
+  opt->addUsage( " -p   --sxy     1   (default) subsampling rate in X/Y" );
+  opt->addUsage( " -q   --sz      1   (default) subsampling rate in Z" );
+  opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
+  opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
+
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -109,6 +135,8 @@ int main ( int argc, char* argv[] )
   /* a flag (takes no argument), supporting long and short form */
   opt->setFlag(  "help",  'h' );
   opt->setFlag(  "blend", 'b' );
+  opt->setFlag(  "mip",   'm' );
+  opt->setFlag(  "reg",   'r' );
 
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
@@ -120,15 +148,10 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "var",     'v' );
   opt->setOption(  "threads", 'n' );
   opt->setOption(  "exp",     'x' );
-
-  /* for options that will be checked only on the command and line not in
-  option/resource file */
-  /* a flag (takes no argument), supporting long and short form */
-   opt->setCommandFlag(  "zip" , 'z');
-
-  /* for options that will be checked only from the option/resource file */
-  /* an option (takes an argument), supporting only long form */
-   opt->setFileOption(  "title" );
+  opt->setOption(  "deconv",  'd' );
+  opt->setOption(  "sxy",     'p' );
+  opt->setOption(  "sz",      'q' );
+  opt->setOption(  "offset",  'o' );
 
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
@@ -148,11 +171,17 @@ int main ( int argc, char* argv[] )
   unsigned int tp = 0;
   unsigned int zStart = 0;
   unsigned int zEnd = 10;
-  std::string lsMap = "/Users/kishoremosaliganti/Dropbox/DataForKishore/LS_measurement/";
+  std::string lsMap = "~/";
+  std::string PSFImagePath = "~/";
+  std::string OffsetFilePath = "~/";
   std::string searchCH = "_ch";
   double thresh = 104.0;
   double var = 100.0;
   unsigned int numOfThreads = 1;
+  double sxy = 1.0;
+  double sz = 1.0;
+  bool subsample = false;
+  bool mip = false;
 
   /* 6. GET THE VALUES */
   if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
@@ -203,6 +232,16 @@ int main ( int argc, char* argv[] )
   {
     searchCH = opt->getValue( 'x' );
   }
+  if( opt->getValue( 'p' ) != NULL  || opt->getValue( "sxy" ) != NULL  )
+  {
+    sxy = atof( opt->getValue( 'p' ) );
+    subsample = true;
+  }
+  if( opt->getValue( 'q' ) != NULL  || opt->getValue( "sz" ) != NULL  )
+  {
+    sz = atof( opt->getValue( 'q' ) );
+    subsample = true;
+  }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
@@ -218,6 +257,12 @@ int main ( int argc, char* argv[] )
     settingsReader->SetCorrectionThreshold( thresh );
     settingsReader->SetCorrectionVariance( var );
   }
+  if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
+  {
+    OffsetFilePath = opt->getValue( 'o' );
+    settingsReader->SetOffsetFile( OffsetFilePath );
+  }
+
 
   if( opt->getFlag( "blend" ) || opt->getFlag( 'b' ) )
   {
@@ -228,7 +273,28 @@ int main ( int argc, char* argv[] )
     settingsReader->SetBlending( 0 );
   }
 
+  if( opt->getFlag( "mip" ) || opt->getFlag( 'm' ) )
+  {
+    mip = true;
+  }
+
+  if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )
+  {
+    settingsReader->SetRegisterZTiles( 1 );
+  }
+  else
+  {
+    settingsReader->SetRegisterZTiles( 0 );
+  }
+
   settingsReader->Read();
+
+  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "deconv" ) != NULL  )
+  {
+    PSFImagePath = opt->getValue( 'd' );
+    settingsReader->SetPSFPath( PSFImagePath );
+    settingsReader->SetDeconvolutionIterations( 15 );
+  }
 
   StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
   DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();
@@ -259,9 +325,11 @@ int main ( int argc, char* argv[] )
 
   settingsReader->CreateStitchedImage();
 
+  ImageType::PointType sOrigin = settingsReader->GetStitchOrigin();
+
   std::cout << std::endl;
   std::cout << "Stitched image origin" << std::endl;
-  std::cout << settingsReader->GetStitchOrigin() << std::endl;
+  std::cout << sOrigin << std::endl;
   std::cout << "Stitched image dimensions" << std::endl;
   std::cout << settingsReader->GetStitchDimension() << std::endl;
   std::cout << "Stitched image size" << std::endl;
@@ -299,32 +367,102 @@ int main ( int argc, char* argv[] )
   ImageType::Pointer m_StitchedImage = settingsReader->GetStitchedImage();
   m_StitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
 
-  settingsReader->SetROIOrigin( roiOrigin );
-  settingsReader->SetROI( roi );
-  settingsReader->SetNumberOfThreads( numOfThreads );
-  settingsReader->AllocateROI();
-  std::cout << "Allocating ROI image complete" << std::endl;
+  ImageType::Pointer m_ROIImage = ImageType::New();
+  m_ROIImage->SetOrigin( roiOrigin );
+  m_ROIImage->SetSpacing( spacing );
+  m_ROIImage->SetRegions( roi );
+  m_ROIImage->Allocate();
+  m_ROIImage->FillBuffer( 1.0 );
 
-  std::stringstream oFilename;
-  oFilename << argv[3] << settingsReader->GetChannelName();
-  oFilename << "_" << ch << "ch" ;
-  oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
-  oFilename << "_%03dz.tif";
+  FillROIFilterType::Pointer fillROI = FillROIFilterType::New();
+  fillROI->SetInput( m_ROIImage );
+  fillROI->SetSharedData( settingsReader->GetSharedData() );
+  fillROI->InPlaceOn();
+  fillROI->Update();
 
-  std::cout << oFilename.str().c_str() << std::endl;
+  ImageType::SpacingType nspacing;
+  ImageType::SizeType nsize = roiSize;
+  ImageType::PointType nOrigin = roiOrigin;
+  ImageType::Pointer outputImage = fillROI->GetOutput();
+  if ( subsample )
+  {
+    nspacing[0] = spacing[0]*sxy;
+    nspacing[1] = spacing[1]*sxy;
+    nspacing[2] = spacing[2]*sz;
 
-  // Set filename format
-  NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
-  nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
-  nameGeneratorOutput->SetStartIndex( zStart );
-  nameGeneratorOutput->SetEndIndex( zEnd );
-  nameGeneratorOutput->SetIncrementIndex( 1 );
+    unsigned int t_zStart = vcl_ceil( (zStart * spacing[2])/nspacing[2] );
+    unsigned int t_zEnd = vcl_floor( (zEnd * spacing[2])/nspacing[2] );
+    nOrigin[2] = sOrigin[2] + t_zStart * nspacing[2];
 
-  // Write out using Series writer
-  SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
-  series_writer->SetInput( settingsReader->GetROIImage() );
-  series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
-  series_writer->Update();
+    nsize[0] /= sxy;
+    nsize[1] /= sxy;
+    nsize[2] = t_zEnd - t_zStart + 1;
+
+    // create the resample filter, transform and interpolator
+    TransformType::Pointer transform = TransformType::New();
+    transform->SetIdentity();
+
+    InterpolatorType::Pointer interp = InterpolatorType::New();
+    ResampleFilterType::Pointer resample = ResampleFilterType::New();
+    resample->SetTransform ( transform );
+    resample->SetInterpolator ( interp );
+    resample->SetSize ( nsize );
+    resample->SetOutputOrigin ( nOrigin );
+    resample->SetOutputSpacing ( nspacing );
+    resample->SetInput ( fillROI->GetOutput() );
+    resample->SetDefaultPixelValue ( 0 );
+    resample->Update();
+    outputImage = resample->GetOutput();
+    outputImage->DisconnectPipeline();
+
+    zStart = t_zStart;
+    zEnd = t_zEnd;
+  }
+
+  if ( mip )
+  {
+    MIPFilterType::Pointer mipFilter = MIPFilterType::New();
+    mipFilter->SetInput( outputImage );
+    mipFilter->SetProjectionDimension( 2 );
+    mipFilter->SetNumberOfThreads( numOfThreads );
+    mipFilter->Update();
+
+    std::stringstream oFilename;
+    oFilename << argv[3] << settingsReader->GetChannelName();
+    oFilename << "_" << ch << "ch" ;
+    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
+    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << zStart;
+    oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << zEnd;
+    oFilename << "z.tif";
+
+    RWriterType::Pointer writer = RWriterType::New();
+    writer->SetInput( mipFilter->GetOutput() );
+    writer->SetFileName( oFilename.str() );
+    writer->Update();
+  }
+  else
+  {
+    std::stringstream oFilename;
+    oFilename << argv[3] << settingsReader->GetChannelName();
+    oFilename << "_" << ch << "ch" ;
+    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
+    oFilename << "_%03dz.tif";
+
+    std::cout << oFilename.str().c_str() << std::endl;
+
+    // Set filename format
+    NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
+    nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
+    nameGeneratorOutput->SetStartIndex( zStart );
+    nameGeneratorOutput->SetEndIndex( zEnd );
+    nameGeneratorOutput->SetIncrementIndex( 1 );
+
+    // Write out using Series writer
+    SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
+    series_writer->SetInput( outputImage );
+    series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
+    series_writer->Update();
+  }
 
   //delete opt;
 

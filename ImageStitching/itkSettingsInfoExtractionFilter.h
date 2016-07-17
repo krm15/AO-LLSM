@@ -60,14 +60,17 @@
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
 #include "itkImageRegionIterator.h"
-#include "itkPermuteAxesImageFilter.h"
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkRegionOfInterestImageFilter.h"
-#include "itkMultiThreader.h"
+
+#include "itkPermuteAxesImageFilter.h"
+#include "itkRichardsonLucyDeconvolutionImageFilter.h"
+#include "itkStitchingSharedData.h"
 
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkCastImageFilter.h"
 #include "itkImageFileWriter.h"
+#include "itkMatrix.h"
 
 namespace itk
 {
@@ -95,7 +98,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef std::vector< ValueType > DoubleVectorType;
   typedef vnl_matrix< ValueType > vnlMatrixType;
   typedef vnl_vector< ValueType > vnlVectorType;
-  typedef std::vector< std:: vector< std::vector< std::string > > > StringArray3DType;
   typedef Directory DirectoryType;
   typedef typename DirectoryType::Pointer DirectoryPointer;
 
@@ -106,6 +108,12 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef itk::ImageRegionIterator< ImageType > IteratorType;
   typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
   typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
+
+  typedef RichardsonLucyDeconvolutionImageFilter< ImageType > DeconvolutionFilterType;
+  typedef typename DeconvolutionFilterType::Pointer DeconvolutionFilterPointer;
+
+  typedef StitchingSharedData< ImageType > SharedDataType;
+  typedef typename SharedDataType::Pointer SharedDataPointer;
 
   typedef typename ImageType::PixelType PixelType;
   typedef typename ImageType::SizeType SizeType;
@@ -149,6 +157,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
   void AllocateROI();
+  void ReadPSFImage();
 
 
   unsigned int * GetTileNumber()
@@ -167,9 +176,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   }
 
   itkGetObjectMacro( StitchedImage, ImageType );
-  itkGetObjectMacro( ROIImage,      ImageType );
+  itkGetObjectMacro( SharedData, SharedDataType );
 
-  itkGetConstMacro( TileFileNameArray,  StringArray3DType );
   itkGetConstMacro( SettingFieldName,   StringVectorType );
   itkGetConstMacro( SettingFieldValue,  DoubleVectorType );
   itkGetConstMacro( NumberOfTiles,      unsigned int );
@@ -183,23 +191,27 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkGetConstMacro( StitchRegion,       RegionType );
   itkGetConstMacro( ChannelName,        std::string );
 
-  itkSetMacro( CorrectionThreshold, ValueType );
+  void SetCorrectionThreshold( ValueType& val )
+  {
+    m_SharedData->m_CorrectionThreshold = val;
+  }
+
   itkSetMacro( CorrectionVariance,  ValueType );
   itkSetMacro( Blending,            bool );
-  itkSetMacro( ROIOrigin,           PointType );
-  itkSetMacro( ROI,                 RegionType );
+  itkSetMacro( RegisterZTiles,      bool );
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
   itkSetMacro( CorrectionDirectory, std::string );
+  itkSetMacro( PSFPath,             std::string );
+  itkSetMacro( OffsetFile,          std::string );
   itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
-  itkSetMacro( NumberOfThreads,     unsigned int );
-
+  itkSetMacro( DeconvolutionIterations, unsigned int );
 
   protected:
   SettingsInfoExtractionFilter();
-  ~SettingsInfoExtractionFilter() {}
+  ~SettingsInfoExtractionFilter(){}
 
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
@@ -210,12 +222,16 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void ReadCorrectionImage();
   void BlendingNormalization();
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
-
+  void ReadOffsetFile();
+  void WriteOffsetFile();
+  void RegisterTiles();
 
   std::string   m_Path;
   std::string   m_SettingsDirectory;
   std::string   m_TileDirectory;
   std::string   m_CorrectionDirectory;
+  std::string   m_PSFPath;
+  std::string   m_OffsetFile;
   std::string   m_ChannelName;
   std::string   m_SampleName;
   unsigned int  m_ChannelNumber;
@@ -231,16 +247,11 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   ValueType         m_TileSize[3];
   SizeType          m_TileDimension;
   SpacingType       m_TileSpacing;
-  StringArray3DType m_TileFileNameArray;
   ValueType         m_TileOverlap[3];
 
   PointType m_MinimumStart;
   PointType m_MaximumEnd;
 
-  DoubleVectorType  m_TileCoverStart[3];
-  DoubleVectorType  m_TileCoverEnd[3];
-  DoubleVectorType  m_TileCoverStartClipped[3];
-  DoubleVectorType  m_TileCoverEndClipped[3];
   DoubleVectorType  m_TileOffset[3];
   DoubleVectorType  m_TileEffectiveOffset[3];
 
@@ -258,15 +269,10 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   RegionType    m_StitchRegion;
   bool          m_Blending;
 
-  ImagePointer  m_ROIImage;
-  ImagePointer  m_ROIOverlapImage;
-  PointType     m_ROIOrigin;
-  RegionType    m_ROI;
-  unsigned int  m_NumberOfThreads;
-
-  RImagePointer m_CorrectionImage;
-  ValueType     m_CorrectionThreshold;
   ValueType     m_CorrectionVariance;
+  unsigned int  m_DeconvolutionIterations;
+  bool          m_RegisterZTiles;
+  SharedDataPointer m_SharedData;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

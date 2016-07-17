@@ -51,17 +51,11 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkPermuteAxesImageFilter.h"
 #include "itkSettingsInfoExtractionFilter.h"
+#include "itkRichardsonLucyDeconvolutionImageFilter.h"
+#include "anyoption.h"
 
 int main ( int argc, char* argv[] )
 {
-  if ( argc < 5 )
-  {
-    std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iInputSettingsDir iInputImageDir oOutputImageDir ";
-    std::cerr << "iChannelNumber iTimePoint" << std::endl;
-    return EXIT_FAILURE;
-  }
-
   const unsigned int Dimension = 3;
   typedef std::vector< std::string > StringVectorType;
   typedef std::vector< double > DoubleVectorType;
@@ -77,6 +71,7 @@ int main ( int argc, char* argv[] )
   typedef itk::PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
 
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
+  typedef itk::RichardsonLucyDeconvolutionImageFilter< ImageType > DeconvolutionFilterType;
 
   typedef unsigned short OutputPixelType;
   typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
@@ -90,11 +85,88 @@ int main ( int argc, char* argv[] )
   typedef ImageType::PointType PointType;
   typedef SizeType::SizeValueType SizeValueType;
 
+
+  /* 1. CREATE AN OBJECT */
+  AnyOption *opt = new AnyOption();
+
+  /* 2. SET PREFERENCES  */
+  //opt->noPOSIX(); /* do not check for POSIX style character options */
+  //opt->setVerbose(); /* print warnings about unknown options */
+  //opt->autoUsagePrint(true); /* print usage for bad options */
+
+  /* 3. SET THE USAGE/HELP   */
+  opt->addUsage( "" );
+  opt->addUsage( "Usage: " );
+  opt->addUsage( "" );
+  opt->addUsage( " iSettings file directory " );
+  opt->addUsage( " iTile directories " );
+  opt->addUsage( " Output directory " );
+  opt->addUsage( " -h   --help    Prints this help " );
+  opt->addUsage( " -c   --channel 0   (default) channel value" );
+  opt->addUsage( " -t   --time    0   (default) timepoint" );
+  opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
+  opt->addUsage( "" );
+
+  /* 4. SET THE OPTION STRINGS/CHARACTERS */
+
+  /* by default all  options will be checked on the command line
+    and from option/resource file */
+
+  /* a flag (takes no argument), supporting long and short form */
+  opt->setFlag(  "help",  'h' );
+
+  /* an option (takes an argument), supporting long and short form */
+  opt->setOption(  "channel", 'c' );
+  opt->setOption(  "time",    't' );
+  opt->setOption(  "deconv",  'd' );
+
+  /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
+  /* read options from a  option/resource file with ':'
+  separated options or flags, one per line */
+
+  opt->processFile( ".options" );
+  opt->processCommandArgs( argc, argv );
+
+  if( ! opt->hasOptions())
+  {
+    opt->printUsage();
+    delete opt;
+    return EXIT_FAILURE;
+  }
+
+  /* 6. GET THE VALUES */
+  if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) || ( opt->getArgc() < 3 ) )
+  {
+    opt->printUsage();
+    delete opt;
+    return EXIT_FAILURE;
+  }
+
+  unsigned int ch = 0;
+  unsigned int tp = 0;
+  unsigned int numOfIterations = 15;
+  bool deconv = false;
+  std::string PSFImagePath = "~/";
+
+  if( opt->getValue( 'c' ) != NULL  || opt->getValue( "channel" ) != NULL  )
+  {
+    ch = atoi( opt->getValue( 'c' ) );
+  }
+  if( opt->getValue( 't' ) != NULL  || opt->getValue( "time" ) != NULL  )
+  {
+    tp = atoi( opt->getValue( 't' ) );
+  }
+  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "deconv" ) != NULL  )
+  {
+    PSFImagePath = opt->getValue( 'd' );
+    deconv = true;
+  }
+
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
-  settingsReader->SetChannelNumber( atoi(argv[4]) );
-  settingsReader->SetTimePoint( atoi(argv[5]) );
+  settingsReader->SetChannelNumber( ch );
+  settingsReader->SetTimePoint( tp );
   settingsReader->Read();
 
   StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
@@ -136,6 +208,16 @@ int main ( int argc, char* argv[] )
   std::cout << settingsReader->GetStitchSize()[1] << ' ';
   std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
+  ImageType::Pointer kernelImage;
+  if ( deconv )
+  {
+    ReaderType::Pointer kernelReader = ReaderType::New();
+    kernelReader->SetFileName( PSFImagePath );
+    kernelReader->Update();
+    kernelImage = kernelReader->GetOutput();
+    kernelImage->DisconnectPipeline();
+  }
+
 
   // Read all the files in the input directory of type ch and at timePoint
   std::string filename;
@@ -150,54 +232,69 @@ int main ( int argc, char* argv[] )
     {
        for( unsigned int j = 0; j < tileNumber[1]; j++ )
        {
+         filename = settingsReader->GetSharedData()->GetTileFileNameArray()[i][j][k];
 
-        filename = settingsReader->GetTileFileNameArray()[i][j][k];
-
-        //std::cout << "Filename: " << filename << std::endl;
-        if ( !filename.empty() )
-        {
-          ReaderType::Pointer reader = ReaderType::New();
-          reader->SetFileName ( filename.c_str() );
-          reader->Update();
+         //std::cout << "Filename: " << filename << std::endl;
+         if ( !filename.empty() )
+         {
+           ReaderType::Pointer reader = ReaderType::New();
+           reader->SetFileName ( filename.c_str() );
+           reader->Update();
 
 //        PermuteAxesFilterType::Pointer pAFilter = PermuteAxesFilterType::New();
 //        pAFilter->SetInput( reader->GetOutput() );
 //        pAFilter->SetOrder( axesOrder );
 //        pAFilter->Update();
-        ImageType::Pointer pImage = reader->GetOutput();
+           ImageType::Pointer pImage = reader->GetOutput();
 
-        ImageType::Pointer currentImage = ImageType::New();
-        currentImage->SetOrigin( pImage->GetOrigin() );
-        currentImage->SetSpacing( pImage->GetSpacing() );
-        currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
-        currentImage->Allocate();
+           ImageType::Pointer currentImage = ImageType::New();
+           currentImage->SetOrigin( pImage->GetOrigin() );
+           currentImage->SetSpacing( pImage->GetSpacing() );
+           currentImage->SetRegions( pImage->GetLargestPossibleRegion() );
+           currentImage->Allocate();
 
-        IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
-        IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
-        while(!pIt.IsAtEnd())
-        {
-          cIt.Set( pIt.Get() );
-          ++pIt;
-          ++cIt;
-        }
+           IteratorType pIt( pImage, pImage->GetLargestPossibleRegion() );
+           IteratorType cIt( currentImage, currentImage->GetLargestPossibleRegion() );
+           while(!pIt.IsAtEnd())
+           {
+             cIt.Set( pIt.Get() );
+             ++pIt;
+             ++cIt;
+           }
 
-        CastFilterType::Pointer caster = CastFilterType::New();
-        caster->SetInput( currentImage );//rescale->GetOutput()
-        caster->Update();
+           ImageType::Pointer deconvImage;
+           if ( deconv )
+           {
+             DeconvolutionFilterType::Pointer deconvolutionFilter = DeconvolutionFilterType::New();
+             deconvolutionFilter->SetInput( currentImage );
+             deconvolutionFilter->SetKernelImage( kernelImage );
+             deconvolutionFilter->NormalizeOn();
+             deconvolutionFilter->SetNumberOfIterations( numOfIterations );
+             deconvolutionFilter->Update();
+             deconvImage = deconvolutionFilter->GetOutput();
+             deconvImage->DisconnectPipeline();
+           }
+           else
+           {
+             deconvImage = currentImage;
+           }
 
-          std::stringstream  filename3;
-          unsigned int lastindex1 = filename.find_last_of( "/" );
-          unsigned int lastindex2 = filename.find_last_of( "." );
-          std::string rawname = filename.substr( lastindex1+1, lastindex2 - lastindex1 -1 );
-          std::cout << rawname << std::endl;
-          filename3 << argv[3] << rawname << ".mha";
-          std::cout << filename3.str().c_str() << std::endl;
+           CastFilterType::Pointer caster = CastFilterType::New();
+           caster->SetInput( deconvImage );//rescale->GetOutput()
+           caster->Update();
 
-          WriterType::Pointer writer = WriterType::New();
-          writer->SetFileName( filename3.str().c_str() );
-          writer->SetInput( caster->GetOutput() );
-          //writer->UseCompressionOn();
-          writer->Update();
+           std::stringstream  filename3;
+           unsigned int lastindex1 = filename.find_last_of( "/" );
+           unsigned int lastindex2 = filename.find_last_of( "." );
+           std::string rawname = filename.substr( lastindex1+1, lastindex2 - lastindex1 -1 );
+           std::cout << rawname << std::endl;
+           filename3 << argv[3] << rawname << ".mha";
+           std::cout << filename3.str().c_str() << std::endl;
+
+           WriterType::Pointer writer = WriterType::New();
+           writer->SetFileName( filename3.str().c_str() );
+           writer->SetInput( caster->GetOutput() );
+           writer->Update();
         }
       }
     }
