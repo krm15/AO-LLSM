@@ -111,12 +111,19 @@ protected:
   void OverlapRegion( ImagePointer A, ImagePointer B,
                       RegionType& rA, RegionType& rB );
   void PrintSelf(std::ostream& os, Indent indent) const;
-  void GenerateData();
-  void FillROI( IndexType& m_ScanStart, IndexType& m_ScanEnd );
+
+  virtual void BeforeThreadedGenerateData();
+  virtual void AfterThreadedGenerateData(){}
+  virtual void ThreadedGenerateData(const RegionType & windowRegion,
+                                    ThreadIdType threadId);
+
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
 
   unsigned int  m_DeconvolutionIterations;
   SharedDataPointer m_SharedData;
+  IndexType m_ScanStart;
+  IndexType m_ScanEnd;
+  unsigned int m_NumOfValidThreads;
 
 private:
   FillROIImageFilter(const Self&) {}

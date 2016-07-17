@@ -110,14 +110,11 @@ OverlapRegion( ImagePointer A, ImagePointer B,
 template< class TInputImage >
 void
 FillROIImageFilter< TInputImage >::
-GenerateData()
+BeforeThreadedGenerateData()
 {
   this->GenerateOutputInformation();
   this->AllocateOutputs();
   this->ReleaseDataFlagOn();
-
-  IndexType m_ScanStart;
-  IndexType m_ScanEnd;
 
   ImagePointer m_ROIImage = this->GetOutput();
   PointType m_ROIOrigin = m_ROIImage->GetOrigin();
@@ -172,13 +169,15 @@ GenerateData()
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
 
-  FillROI( m_ScanStart, m_ScanEnd );
+  const ImageType *outputPtr = this->GetOutput();
+  const ImageRegionSplitterBase * splitter = this->GetImageRegionSplitter();
+  m_NumOfValidThreads = splitter->GetNumberOfSplits( outputPtr->GetRequestedRegion(), this->GetNumberOfThreads() );
 }
 
 template< class TInputImage >
 void
 FillROIImageFilter< TInputImage >::
-FillROI( IndexType& m_ScanStart, IndexType& m_ScanEnd )
+ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 {
   ImagePointer m_ROIImage = this->GetOutput();
   SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
@@ -192,100 +191,105 @@ FillROI( IndexType& m_ScanStart, IndexType& m_ScanEnd )
   IndexType clipTileIndex;
   PointType clipTileOrigin;
 
+  unsigned int counter = 0;
+
   for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
   {
     for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
     {
-      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
+      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++, counter++ )
       {
         //std::cout << i << ' ' << j << ' ' << k << std::endl;
-
-        std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-        //std::cout << filename.c_str() << std::endl;
-        if  ( ! filename.empty() )
+        if ( counter%(m_NumOfValidThreads) == threadId )
         {
-          currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i];
-          currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j];
-          currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k];
-
-          //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
-
-          clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i];
-          clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j];
-          clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
-
-          //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
-
-          clipTileSize[0] = 1 + static_cast<SizeValueType>(
-                        ( m_SharedData->m_TileCover[0][1][1][i] - m_SharedData->m_TileCover[0][0][1][i] )/m_TileSpacing[0] );
-          clipTileSize[1] = 1 + static_cast<SizeValueType>(
-                        ( m_SharedData->m_TileCover[1][1][1][j] - m_SharedData->m_TileCover[1][0][1][j] )/m_TileSpacing[1] );
-          clipTileSize[2] = 1 + static_cast<SizeValueType>(
-                        ( m_SharedData->m_TileCover[2][1][1][k] - m_SharedData->m_TileCover[2][0][1][k] )/m_TileSpacing[2] );
-
-          //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
-
-          ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
-          tileImage->SetOrigin( currentTileOrigin );
-          SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
-
-          //std::cout << "Extraction complete" << std::endl;
-
-          tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
-
-          for( unsigned int m = 0; m < ImageDimension; m++ )
+          std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
+          std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
+          //std::cout << filename.c_str() << std::endl;
+          if  ( ! filename.empty() )
           {
-            if ( clipTileIndex[m] + clipTileSize[m] > m_TileDimension[m] )
+            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i];
+            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j];
+            currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k];
+
+            //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
+
+            clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i];
+            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j];
+            clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
+
+            //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
+
+            clipTileSize[0] = 1 + static_cast<SizeValueType>(
+                          ( m_SharedData->m_TileCover[0][1][1][i] - m_SharedData->m_TileCover[0][0][1][i] )/m_TileSpacing[0] );
+            clipTileSize[1] = 1 + static_cast<SizeValueType>(
+                          ( m_SharedData->m_TileCover[1][1][1][j] - m_SharedData->m_TileCover[1][0][1][j] )/m_TileSpacing[1] );
+            clipTileSize[2] = 1 + static_cast<SizeValueType>(
+                          ( m_SharedData->m_TileCover[2][1][1][k] - m_SharedData->m_TileCover[2][0][1][k] )/m_TileSpacing[2] );
+
+            //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
+
+            ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
+            tileImage->SetOrigin( currentTileOrigin );
+            SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
+
+            //std::cout << "Extraction complete" << std::endl;
+
+            tileImage->TransformPhysicalPointToIndex( clipTileOrigin, clipTileIndex );
+
+            for( unsigned int m = 0; m < ImageDimension; m++ )
             {
-              clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m] - 1;
+              if ( clipTileIndex[m] + clipTileSize[m] > m_TileDimension[m] )
+              {
+                clipTileSize[m] = m_TileDimension[m] - clipTileIndex[m] - 1;
+              }
             }
-          }
 
-          roi.SetSize( clipTileSize );
-          roi.SetIndex( clipTileIndex );
+            roi.SetSize( clipTileSize );
+            roi.SetIndex( clipTileIndex );
 
 
-          //std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
-          //std::cout << "Clip tile roi: " << roi << std::endl;
+            //std::cout << "Tile region:" << tileImage->GetLargestPossibleRegion() << std::endl;
+            //std::cout << "Clip tile roi: " << roi << std::endl;
 
-          // Extract ROI
-          ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
-          roiFilter->SetRegionOfInterest( roi );
-          roiFilter->SetInput( tileImage );
-          roiFilter->Update();
-          ImagePointer currentImage = roiFilter->GetOutput();
-          currentImage->DisconnectPipeline();
-          currentTileRegion = currentImage->GetLargestPossibleRegion();
+            // Extract ROI
+            ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
+            roiFilter->SetRegionOfInterest( roi );
+            roiFilter->SetInput( tileImage );
+            roiFilter->Update();
+            ImagePointer currentImage = roiFilter->GetOutput();
+            currentImage->DisconnectPipeline();
+            currentTileRegion = currentImage->GetLargestPossibleRegion();
 
-          //std::cout << "ROI filtering complete " << std::endl;
+            //std::cout << "ROI filtering complete " << std::endl;
 
-          OverlapRegion( currentImage , m_ROIImage,
-                         currentTileOverlapRegion, roiOverlapRegion );
+            OverlapRegion( currentImage , m_ROIImage,
+                           currentTileOverlapRegion, roiOverlapRegion );
 
-          //std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
-          //std::cout << "ROI extent: " << m_ROI << std::endl;
-          //std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
+            //std::cout << "ROI Image origin: " << m_ROIImage->GetOrigin() << std::endl;
+            //std::cout << "ROI extent: " << m_ROI << std::endl;
+            //std::cout << "ROI Image region: " << roiOverlapRegion << std::endl;
 
-          //std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
-          //std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
-          //std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
+            //std::cout << "Tile origin: " << currentImage->GetOrigin() << std::endl;
+            //std::cout << "Current Tile extent: " << currentImage->GetLargestPossibleRegion() << std::endl;
+            //std::cout << "Current Tile Region: " << currentTileOverlapRegion << std::endl;
 
-          // Using these images, fill up roiImage
+            // Using these images, fill up roiImage
 
-          if ( m_ROI.IsInside( roiOverlapRegion ) &&
-               currentTileRegion.IsInside( currentTileOverlapRegion ) )
-          {// Clipping may eliminate overlap
-            IteratorType rIt( m_ROIImage, roiOverlapRegion );
-            rIt.GoToBegin();
-            IteratorType tIt( currentImage, currentTileOverlapRegion );
-            tIt.GoToBegin();
+            if ( m_ROI.IsInside( roiOverlapRegion ) &&
+                 currentTileRegion.IsInside( currentTileOverlapRegion ) )
+            {// Clipping may eliminate overlap
+              IteratorType rIt( m_ROIImage, roiOverlapRegion );
+              rIt.GoToBegin();
+              IteratorType tIt( currentImage, currentTileOverlapRegion );
+              tIt.GoToBegin();
 
-            PixelType p;
-            while( !tIt.IsAtEnd() )
-            {
-              rIt.Set( tIt.Get() );//rIt.Get() +
-              ++tIt;
-              ++rIt;
+              PixelType p;
+              while( !tIt.IsAtEnd() )
+              {
+                rIt.Set( tIt.Get() );//rIt.Get() +
+                ++tIt;
+                ++rIt;
+              }
             }
           }
         }

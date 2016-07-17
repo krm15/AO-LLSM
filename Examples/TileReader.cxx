@@ -226,7 +226,6 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
   {
     numOfThreads = atof( opt->getValue( 'n' ) );
-    numOfThreads = 1;
   }
   if( opt->getValue( 'x' ) != NULL  || opt->getValue( "exp" ) != NULL  )
   {
@@ -378,6 +377,7 @@ int main ( int argc, char* argv[] )
   fillROI->SetInput( m_ROIImage );
   fillROI->SetSharedData( settingsReader->GetSharedData() );
   fillROI->InPlaceOn();
+  fillROI->SetNumberOfThreads( numOfThreads );
   fillROI->Update();
 
   ImageType::SpacingType nspacing;
