@@ -217,9 +217,9 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
           //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
-            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i];
-            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j];
-            currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k];
+            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[0][k];
+            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[1][k];
+            currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
 
             //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
@@ -239,8 +239,11 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
             ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
+	    
+	    // Add the offset to the tileImageOrigin
             tileImage->SetOrigin( currentTileOrigin );
-            SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
+            
+	    SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
 
             //std::cout << "Extraction complete" << std::endl;
 
