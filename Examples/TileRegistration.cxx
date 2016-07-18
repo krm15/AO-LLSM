@@ -140,7 +140,7 @@ int main ( int argc, char* argv[] )
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
 
-  if( opt->getArgc() < 3 )
+  if( opt->getArgc() < 2 )
   {
     std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
     opt->printUsage();
@@ -188,7 +188,7 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
   {
     OffsetFilePath = opt->getValue( 'o' );
-    settingsReader->SetOffsetFile( OffsetFilePath );
+    settingsReader->SetOffsetFilePath( OffsetFilePath );
   }
 
   if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )

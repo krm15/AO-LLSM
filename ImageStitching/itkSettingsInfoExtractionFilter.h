@@ -63,11 +63,7 @@
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkStitchingSharedData.h"
 #include "itkFillROIImageFilter.h"
-
-#include "itkImageRegistrationMethod.h"
-#include "itkTranslationTransform.h"
-#include "itkMeanSquaresImageToImageMetric.h"
-#include "itkRegularStepGradientDescentOptimizer.h"
+#include "itkHistogramMatchingImageFilter.h"
 
 #include "itkImageFileWriter.h"
 
@@ -127,18 +123,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef FillROIImageFilter< ImageType > FillROIFilterType;
   typedef typename FillROIFilterType::Pointer FillROIFilterPointer;
 
-  typedef TranslationTransform< double, ImageDimension > TransformType;
-  typedef typename TransformType::Pointer TransformPointer;
-  typedef RegularStepGradientDescentOptimizer       OptimizerType;
-  typedef typename OptimizerType::Pointer OptimizerPointer;
-  typedef MeanSquaresImageToImageMetric< ImageType, ImageType >    MetricType;
-  typedef typename MetricType::Pointer MetricPointer;
-  typedef LinearInterpolateImageFunction< ImageType, double > InterpolatorType;
-  typedef typename InterpolatorType::Pointer InterpolatorPointer;
-  typedef ImageRegistrationMethod< ImageType, ImageType > RegistrationType;
-  typedef typename RegistrationType::Pointer RegistrationPointer;
-  typedef typename RegistrationType::ParametersType ParametersType;
-
   void Read();
   void UpdateFileNameLookup( std::istream& os );
   void CreateStitchedImage();
@@ -178,7 +162,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( RegisterZTiles,      bool );
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
-  itkSetMacro( OffsetFile,          std::string );
+  itkSetMacro( OffsetFilePath,          std::string );
   itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
@@ -188,7 +172,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   protected:
   SettingsInfoExtractionFilter();
   ~SettingsInfoExtractionFilter(){}
-
+  void OverlapRegion( ImagePointer A, ImagePointer B,
+                      RegionType& rA, RegionType& rB );
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
@@ -201,7 +186,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   std::string   m_Path;
   std::string   m_SettingsDirectory;
   std::string   m_TileDirectory;
-  std::string   m_OffsetFile;
+  std::string   m_OffsetFilePath;
   std::string   m_ChannelName;
   std::string   m_SampleName;
   unsigned int  m_ChannelNumber;
@@ -221,9 +206,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
 
   PointType m_MinimumStart;
   PointType m_MaximumEnd;
-
-  DoubleVectorType  m_TileOffset[3];
-  DoubleVectorType  m_TileEffectiveOffset[3];
 
   unsigned int      m_ScanStart[3];
   unsigned int      m_ScanEnd[3];

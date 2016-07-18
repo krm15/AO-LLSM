@@ -125,7 +125,7 @@ BeforeThreadedGenerateData()
   PointType m_ROIOrigin = m_ROIImage->GetOrigin();
   SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
   RegionType m_ROI = m_ROIImage->GetLargestPossibleRegion();
-
+  
   unsigned int m_TileNumber[3];
   for( unsigned int k = 0; k < ImageDimension; k++ )
   {
@@ -140,7 +140,7 @@ BeforeThreadedGenerateData()
     m_ScanStart[2] = m_ScanEnd[2] = m_ZTile;
     return;
   }
-
+  
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -192,8 +192,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
   ImagePointer m_ROIImage = this->GetOutput();
   SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
   RegionType m_ROI = m_ROIImage->GetLargestPossibleRegion();
-
-  std::cout << m_ROI << std::endl;
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
   PointType currentTileOrigin;
@@ -267,7 +265,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             ImagePointer currentImage = tileImage;
             if ( !m_SingleZFill )
             {
-              std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
               ROIFilter3DPointer roiFilter = ROIFilter3DType::New();
               roiFilter->SetRegionOfInterest( roi );
               roiFilter->SetInput( tileImage );
@@ -275,6 +272,10 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
               currentImage = roiFilter->GetOutput();
               currentImage->DisconnectPipeline();
             }
+            else
+            {
+	      //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
+	    }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
 
             //std::cout << "ROI filtering complete " << std::endl;

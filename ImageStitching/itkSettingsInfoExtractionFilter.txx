@@ -50,11 +50,61 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
 
   m_NumberOfTiles = 1;
   m_StitchedImage = ITK_NULLPTR;
-  m_OffsetFile = "";
+  m_OffsetFilePath = "";
   m_ChannelPrefix = "_ch";
   m_RegisterZTiles = false;
   m_SharedData = ITK_NULLPTR;
   m_ZTile = 0;
+}
+
+
+template < class TValueType, class TInputImage >
+void
+SettingsInfoExtractionFilter< TValueType, TInputImage >::
+OverlapRegion( ImagePointer A, ImagePointer B, RegionType& rA, RegionType& rB )
+{
+  SizeType sizeA, sizeB, s;
+  sizeA = A->GetLargestPossibleRegion().GetSize();
+  sizeB = B->GetLargestPossibleRegion().GetSize();
+
+  PointType originA = A->GetOrigin();
+  PointType originB = B->GetOrigin();
+
+  IndexType sIndexA, sIndexB;
+  IndexType tIndexA, tIndexB;
+
+  A->TransformPhysicalPointToIndex( originB, tIndexA );
+  B->TransformPhysicalPointToIndex( originA, tIndexB );
+
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    if ( originA[i] > originB[i] )
+    {
+      sIndexA[i] = 0;
+      sIndexB[i] = tIndexB[i];
+      s[i] = sizeA[i];
+      if ( s[i] > static_cast< SizeValueType >( sizeB[i] - sIndexB[i] - 1 ) )
+      {
+        s[i] = sizeB[i] - sIndexB[i];
+      }
+    }
+    else
+    {
+      sIndexB[i] = 0;
+      sIndexA[i] = tIndexA[i];
+      s[i] = sizeB[i];
+      if ( s[i] > static_cast< SizeValueType >(
+        sizeA[i] - sIndexA[i] - 1 ) )
+      {
+        s[i] = sizeA[i] - sIndexA[i];
+      }
+    }
+  }
+
+  rA.SetIndex( sIndexA );
+  rA.SetSize( s );
+  rB.SetIndex( sIndexB );
+  rB.SetSize( s );
 }
 
 
@@ -138,139 +188,141 @@ RegisterTiles()
 {
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
-    m_TileOffset[i].resize( m_TileNumber[2], 0.0 );
-    m_TileEffectiveOffset[i].resize( m_TileNumber[2], 0.0 );
-  }
-
-  // Read offset file
-  if ( !m_OffsetFile.empty() )
-  {
-    ReadOffsetFile();
+    m_SharedData->m_TileOffset[i].resize( m_TileNumber[2], 0.0 );
+    m_SharedData->m_TileEffectiveOffset[i].resize( m_TileNumber[2], 0.0 );
   }
 
   if ( !m_RegisterZTiles )
   {
+    // Read offset file
+    if ( !m_OffsetFilePath.empty() )
+    {
+      ReadOffsetFile();
+    }
     return;
   }
 
-  // Step through z tiles
-  unsigned int i = m_ZTile;
+  bool tileForRegistration = false;
+  unsigned int i_,j_;
+  for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
+  {
+    for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
+    {
+      if ( ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile].empty() ) &&
+	   ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile+1].empty() ) && 
+	   ( !tileForRegistration ) )
+      {
+	tileForRegistration = true;
+	i_ = i;
+	j_ = j;
+      }
+    }
+  }
+  
+  
+  ReaderPointer sreader = ReaderType::New();
+  sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile] );
+  sreader->Update();
+  ImagePointer staticImage = sreader->GetOutput();
+  staticImage->DisconnectPipeline();
+  
+  ReaderPointer mreader = ReaderType::New();
+  mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile+1] );
+  mreader->Update();
+  ImagePointer movingImage = mreader->GetOutput();
+  movingImage->DisconnectPipeline();
+  
+  PointType sorigin;
+  sorigin[0] = 0.0;
+  sorigin[1] = 0.0;
+  sorigin[2] = 0.0;
+   
+  PointType morigin;
+  morigin[0] = 0.0;
+  morigin[1] = 0.0;
+  morigin[2] = m_TileSize[2] - m_TileOverlap[2];
 
-  PointType origin;
-  origin[0] = m_MinimumStart[0];
-  origin[1] = m_MinimumStart[1];
-  origin[2] = m_SharedData->m_TileCover[2][1][0][m_ZTile] - m_TileOverlap[2];
-
-  IndexType  roiIndex;
-  roiIndex.Fill( 0 );
-
-  SizeType roiSize = m_StitchDimension;
-  roiSize[2] = static_cast<SizeValueType>( m_TileOverlap[2]/m_TileSpacing[2] ) + 1;
-
-  RegionType roi;
-  roi.SetIndex( roiIndex );
-  roi.SetSize( roiSize );
-
-  // Assemble ROI of static and moving images
-  ImagePointer m_ROIStaticImage = ImageType::New();
-  m_ROIStaticImage->SetOrigin( origin );
-  m_ROIStaticImage->SetSpacing( m_TileSpacing );
-  m_ROIStaticImage->SetRegions( roi );
-  m_ROIStaticImage->Allocate();
-  m_ROIStaticImage->FillBuffer( 0.0 );
-
-  FillROIFilterPointer fillStaticROI = FillROIFilterType::New();
-  fillStaticROI->SetInput( m_ROIStaticImage );
-  fillStaticROI->SetZTile( m_ZTile );
-  fillStaticROI->SetSharedData( m_SharedData );
-  fillStaticROI->InPlaceOn();
-  fillStaticROI->SetNumberOfThreads( 1 );
-  fillStaticROI->Update();
-  ImagePointer m_staticImage = fillStaticROI->GetOutput();
-  std::cout << "Extracted static image" << std::endl;
-
+  staticImage->SetOrigin( sorigin );
+  staticImage->SetSpacing( m_TileSpacing );
+  movingImage->SetOrigin( morigin );
+  movingImage->SetSpacing( m_TileSpacing );
+  
   WriterPointer writer1 = WriterType::New();
-  writer1->SetInput( m_staticImage );
-  writer1->SetFileName( "Static.mha" );
+  writer1->SetInput( staticImage );
+  writer1->SetFileName( "/home/krm15/output/static.mha" );
   writer1->Update();
 
-  ImagePointer m_ROIMovingImage = ImageType::New();
-  m_ROIMovingImage->SetOrigin( origin );
-  m_ROIMovingImage->SetSpacing( m_TileSpacing );
-  m_ROIMovingImage->SetRegions( roi );
-  m_ROIMovingImage->Allocate();
-  m_ROIMovingImage->FillBuffer( 0.0 );
-
-  FillROIFilterPointer fillMovingROI = FillROIFilterType::New();
-  fillMovingROI->SetInput( m_ROIMovingImage );
-  fillMovingROI->SetZTile( m_ZTile );
-  fillMovingROI->SetSharedData( m_SharedData );
-  fillMovingROI->InPlaceOn();
-  fillMovingROI->SetNumberOfThreads( 1 );
-  fillMovingROI->Update();
-  ImagePointer m_movingImage = fillMovingROI->GetOutput();
-  std::cout << "Extracted moving image" << std::endl;
-
   WriterPointer writer2 = WriterType::New();
-  writer2->SetInput( m_movingImage );
-  writer2->SetFileName( "Moving.mha" );
-  writer2->Update();
-
-  // Compute overlap of ROI
-
-  MetricPointer         metric        = MetricType::New();
-  TransformPointer      transform     = TransformType::New();
-  OptimizerPointer      optimizer     = OptimizerType::New();
-  optimizer->SetMaximumStepLength( 3.00 );
-  optimizer->SetMinimumStepLength( 0.01 );
-  optimizer->SetNumberOfIterations( 1 );
-  InterpolatorPointer   interpolator  = InterpolatorType::New();
-  ParametersType initialParameters( transform->GetNumberOfParameters() );
-
+  writer2->SetInput( movingImage );
+  writer2->SetFileName( "/home/krm15/output/moving.mha" );
+  writer2->Update();  
+  
+  RegionType sROI, mROI;
+  PointType norigin;
+  
+  double val1, val2;
+  OverlapRegion( staticImage, movingImage, sROI, mROI );
+  IteratorType sIt( staticImage, sROI );
+  IteratorType mIt( movingImage, mROI );
+  sIt.GoToBegin();
+  mIt.GoToBegin();
+  while( !sIt.IsAtEnd() )
+  {
+    val1 += sIt.Get();
+    val2 += mIt.Get();
+    ++sIt;
+    ++mIt;
+  }
+  double scaleFactor = val1/val2;
+  
   double bestValue = 1000000, besti, bestj, bestk, value;
   value = bestValue;
-  for( float i = -2.0; i <= 2.0; i+=0.1 )
+  for( float i = -5.0; i <= 5.0; i+=0.5 )
   {
-    for( float j = -2.0; j <= 2.0; j+=0.1 )
+    norigin[0] = morigin[0] + i;
+    for( float j = -5.0; j <= 5.0; j+=0.5 )
     {
-      for( float k = -2.0; k <= 2.0; k+=0.2 )
+      norigin[1] = morigin[1] + j;
+      for( float k = -2.0; k <= 2.0; k+=0.5 )
       {
-        std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
-        initialParameters[0] = m_TileOffset[0][m_ZTile] + i;  // Initial offset along X
-        initialParameters[1] = m_TileOffset[1][m_ZTile] + j;  // Initial offset along Y
-        initialParameters[2] = m_TileOffset[2][m_ZTile] + k;  // Initial offset along Z
-
-        RegistrationPointer registration  = RegistrationType::New();
-        registration->SetNumberOfThreads( 1 );
-        registration->SetMetric(        metric        );
-        registration->SetOptimizer(     optimizer     );
-        registration->SetTransform(     transform     );
-        registration->SetInterpolator(  interpolator  );
-        registration->SetFixedImage(    m_staticImage    );
-        registration->SetMovingImage(   m_movingImage   );
-        registration->SetFixedImageRegion( m_staticImage->GetLargestPossibleRegion() );
-        registration->SetInitialTransformParameters( initialParameters );
-        registration->Update();
-
-        value = static_cast<double>( optimizer->GetValue() );
+	std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;	
+	norigin[2] = morigin[2] + k;
+	movingImage->SetOrigin( norigin );
+	
+	OverlapRegion( staticImage, movingImage, sROI, mROI );
+	
+	value = 0.0;
+	IteratorType sIt( staticImage, sROI );
+	IteratorType mIt( movingImage, mROI );
+	sIt.GoToBegin();
+	mIt.GoToBegin();
+	while( !sIt.IsAtEnd() )
+	{
+	  val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
+	  value += val1 * val1;
+	  ++sIt;
+	  ++mIt;
+	}
+	value /= sROI.GetNumberOfPixels();
+		
         if ( value  < bestValue )
         {
           bestValue = value;
-          besti = m_TileOffset[0][m_ZTile] + i;
-          bestj = m_TileOffset[1][m_ZTile] + j;
-          bestk = m_TileOffset[2][m_ZTile] + k;
-          std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
+          besti = i;
+          bestj = j;
+          bestk = k;
+          std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
         }
       }
     }
   }
   std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-  m_TileOffset[0][m_ZTile] = besti;
-  m_TileOffset[1][m_ZTile] = bestj;
-  m_TileOffset[2][m_ZTile] = bestk;
+  m_SharedData->m_TileOffset[0][m_ZTile+1] = besti;
+  m_SharedData->m_TileOffset[1][m_ZTile+1] = bestj;
+  m_SharedData->m_TileOffset[2][m_ZTile+1] = bestk;
 
   // Write out the offsets
-  if ( !m_OffsetFile.empty() )
+  if ( !m_OffsetFilePath.empty() )
   {
     WriteOffsetFile();
   }
@@ -282,35 +334,40 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadOffsetFile()
 {
-  std::ifstream os ( m_OffsetFile.c_str() );
-
-  if ( !os )
+  for( unsigned int id = 1; id < m_TileNumber[2]; id++  )
   {
-    return;
-  }
+    std::stringstream m_OffsetFile;
+    m_OffsetFile << m_OffsetFilePath << id << ".txt";
+    std::ifstream os ( m_OffsetFile.str().c_str() );
 
-  std::string line, value;
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    std::getline ( os, line );
-    std::stringstream valueStream( line );
-    for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
+    if ( !os )
     {
-      std::getline ( valueStream, value, ' ' );
-      m_TileOffset[i][j] = atof( value.c_str() );
+      return;
     }
-  }
 
+    std::string line, value;
+    for( unsigned int i = 0; i < ImageDimension; i++ )
+    {
+      std::getline ( os, line );
+      std::stringstream valueStream( line );
+      for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
+      {
+	std::getline ( valueStream, value, ' ' );
+	m_SharedData->m_TileOffset[i][j] += atof( value.c_str() );
+      }
+    }
+    os.close();
+  }
+    
   // Compile offsets to identify effective offsets
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
-    m_TileEffectiveOffset[i][0] = 0.0;
+    m_SharedData->m_TileEffectiveOffset[i][0] = 0.0;
     for( unsigned int j = 1; j < m_TileNumber[2]; j++ )
     {
-      m_TileEffectiveOffset[i][j] = m_TileEffectiveOffset[i][j-1] + m_TileOffset[i][j];
+      m_SharedData->m_TileEffectiveOffset[i][j] = m_SharedData->m_TileEffectiveOffset[i][j-1] + m_SharedData->m_TileOffset[i][j];
     }
   }
-  os.close();
 }
 
 
@@ -319,7 +376,9 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 WriteOffsetFile()
 {
-  std::ofstream os ( m_OffsetFile.c_str() );
+  std::stringstream filename;
+  filename << m_OffsetFilePath << (m_ZTile+1) << ".txt";
+  std::ofstream os ( filename.str().c_str() );
 
   if ( !os )
   {
@@ -331,7 +390,7 @@ WriteOffsetFile()
   {
     for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
     {
-      os << m_TileOffset[i][j] << ' ';
+      os << m_SharedData->m_TileOffset[i][j] << ' ';
     }
     os << std::endl;
   }

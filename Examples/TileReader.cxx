@@ -251,7 +251,7 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
   {
     OffsetFilePath = opt->getValue( 'o' );
-    settingsReader->SetOffsetFile( OffsetFilePath );
+    settingsReader->SetOffsetFilePath( OffsetFilePath );
   }
   if( opt->getFlag( "mip" ) || opt->getFlag( 'm' ) )
   {

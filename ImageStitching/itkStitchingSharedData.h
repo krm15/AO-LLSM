@@ -90,6 +90,8 @@ class StitchingSharedData : public Object
 
   DoubleVectorType  m_TileCover[3][2][2];
   // Dimension, Start/End, Clipping
+  DoubleVectorType  m_TileOffset[3];
+  DoubleVectorType  m_TileEffectiveOffset[3];
 
 protected:
   StitchingSharedData();

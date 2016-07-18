@@ -1,10 +1,4 @@
 /*=========================================================================
-  Author: $Author: arnaudgelas $  // Author of last commit
-  Version: $Rev: 567 $  // Revision of last commit
-  Date: $Date: 2009-08-17 11:47:32 -0400 (Mon, 17 Aug 2009) $  // Date of last commit
-=========================================================================*/
-
-/*=========================================================================
  Authors: The GoFigure Dev. Team.
  at Megason Lab, Systems biology, Harvard Medical school, 2009
 
@@ -37,11 +31,6 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-/*=========================================================================
-  Author: $Author: arnaudgelas $  // Author of last commit
-  Version: $Rev: 567 $  // Revision of last commit
-  Date: $Date: 2009-08-17 11:47:32 -0400 (Mon, 17 Aug 2009) $  // Date of last commit
-=========================================================================*/
 
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
@@ -49,10 +38,10 @@
 
 int main(int argc, char* argv[])
 {
-  if ( argc < 5 )
+  if ( argc < 4 )
     {
     std::cerr << "Usage: " << argv[0]
-              << " iInputImage iKernelImage oOutputImage iterations"
+              << " iInputImage iKernelImage oOutputImage <iterations>"
               << std::endl;
     return EXIT_FAILURE;
     }
@@ -64,21 +53,46 @@ int main(int argc, char* argv[])
   typedef itk::ImageFileWriter< ImageType >  WriterType;
   typedef itk::RichardsonLucyDeconvolutionImageFilter< ImageType > DeconvolutionFilterType;
 
-  unsigned int iterations = static_cast< unsigned int >( atoi( argv[4] ) );
+  unsigned int m_NumberOfIterations = 15;
+  if ( argc > 4)
+  {
+    m_NumberOfIterations = static_cast< unsigned int >( atoi( argv[4] ) );
+    std::cout << "Number of iterations: " << m_NumberOfIterations << std::endl;
+  }
 
   ReaderType::Pointer inputReader = ReaderType::New();
   inputReader->SetFileName( argv[1] );
   inputReader->Update();
+  ImageType::Pointer input = inputReader->GetOutput();
+  input->DisconnectPipeline();
+  std::cout << "Input image read" << std::endl;
+
+  ImageType::SpacingType spacing;
+  spacing[0] = spacing[1] = 0.09;
+  spacing[2] = 0.2;
+
+  input->SetSpacing( spacing );
 
   ReaderType::Pointer kernelReader = ReaderType::New();
   kernelReader->SetFileName( argv[2] );
   kernelReader->Update();
+  ImageType::Pointer kernel = kernelReader->GetOutput();
+  kernel->DisconnectPipeline();
+  std::cout << "Kernel image read" << std::endl;
 
+  spacing[0] = spacing[1] = 0.09;
+  spacing[2] = 0.1;
+  kernel->SetSpacing( spacing );
+
+  std::cout << "Beginning deconvolution" << std::endl;
   DeconvolutionFilterType::Pointer deconvolutionFilter = DeconvolutionFilterType::New();
   deconvolutionFilter->SetInput( inputReader->GetOutput() );
   deconvolutionFilter->SetKernelImage( kernelReader->GetOutput() );
   deconvolutionFilter->NormalizeOn();
-  deconvolutionFilter->SetNumberOfIterations( iterations );
+  deconvolutionFilter->SetNumberOfIterations( m_NumberOfIterations );
+  deconvolutionFilter->SetNumberOfThreads( 2 );
+  deconvolutionFilter->Update();
+  std::cout << "Ending deconvolution" << std::endl;
 
   // Write the deconvolution result
   WriterType::Pointer writer = WriterType::New();
