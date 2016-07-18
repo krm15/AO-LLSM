@@ -186,7 +186,13 @@ RegisterTiles()
   fillStaticROI->InPlaceOn();
   fillStaticROI->SetNumberOfThreads( 1 );
   fillStaticROI->Update();
+  ImagePointer m_staticImage = fillStaticROI->GetOutput();
   std::cout << "Extracted static image" << std::endl;
+
+  WriterPointer writer1 = WriterType::New();
+  writer1->SetInput( m_staticImage );
+  writer1->SetFileName( "Static.mha" );
+  writer1->Update();
 
   ImagePointer m_ROIMovingImage = ImageType::New();
   m_ROIMovingImage->SetOrigin( origin );
@@ -202,7 +208,13 @@ RegisterTiles()
   fillMovingROI->InPlaceOn();
   fillMovingROI->SetNumberOfThreads( 1 );
   fillMovingROI->Update();
+  ImagePointer m_movingImage = fillMovingROI->GetOutput();
   std::cout << "Extracted moving image" << std::endl;
+
+  WriterPointer writer2 = WriterType::New();
+  writer2->SetInput( m_movingImage );
+  writer2->SetFileName( "Moving.mha" );
+  writer2->Update();
 
   // Compute overlap of ROI
 
@@ -234,9 +246,9 @@ RegisterTiles()
         registration->SetOptimizer(     optimizer     );
         registration->SetTransform(     transform     );
         registration->SetInterpolator(  interpolator  );
-        registration->SetFixedImage(    m_ROIStaticImage    );
-        registration->SetMovingImage(   m_ROIMovingImage   );
-        registration->SetFixedImageRegion( m_ROIStaticImage->GetLargestPossibleRegion() );
+        registration->SetFixedImage(    m_staticImage    );
+        registration->SetMovingImage(   m_movingImage   );
+        registration->SetFixedImageRegion( m_staticImage->GetLargestPossibleRegion() );
         registration->SetInitialTransformParameters( initialParameters );
         registration->Update();
 

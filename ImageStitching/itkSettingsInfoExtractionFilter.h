@@ -69,6 +69,8 @@
 #include "itkMeanSquaresImageToImageMetric.h"
 #include "itkRegularStepGradientDescentOptimizer.h"
 
+#include "itkImageFileWriter.h"
+
 
 namespace itk
 {
@@ -104,6 +106,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef ImageFileReader< ImageType > ReaderType;
   typedef typename ReaderType::Pointer ReaderPointer;
   typedef itk::ImageRegionIterator< ImageType > IteratorType;
+  typedef ImageFileWriter< ImageType > WriterType;
+  typedef typename WriterType::Pointer WriterPointer;
 
   typedef StitchingSharedData< ImageType > SharedDataType;
   typedef typename SharedDataType::Pointer SharedDataPointer;

@@ -46,9 +46,6 @@
 #include "itkNumericSeriesFileNames.h"
 
 #include "itkSettingsInfoExtractionFilter.h"
-
-#include "itkRichardsonLucyDeconvolutionImageFilter.h"
-
 #include "itkNearestNeighborInterpolateImageFunction.h"
 #include "itkAffineTransform.h"
 #include "itkResampleImageFilter.h"

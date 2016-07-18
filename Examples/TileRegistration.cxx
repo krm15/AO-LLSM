@@ -44,16 +44,7 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageSeriesWriter.h"
 #include "itkNumericSeriesFileNames.h"
-
 #include "itkSettingsInfoExtractionFilter.h"
-
-#include "itkRichardsonLucyDeconvolutionImageFilter.h"
-
-#include "itkNearestNeighborInterpolateImageFunction.h"
-#include "itkAffineTransform.h"
-#include "itkResampleImageFilter.h"
-#include <itkMaximumProjectionImageFilter.h>
-#include "itkFillROIImageFilter.h"
 #include "itkStitchingSharedData.h"
 #include "anyoption.h"
 
@@ -84,14 +75,6 @@ int main ( int argc, char* argv[] )
   typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
   typedef itk::ImageFileWriter< RImageType> RWriterType;
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
-
-  typedef itk::ResampleImageFilter< ImageType, ImageType > ResampleFilterType;
-  typedef itk::NearestNeighborInterpolateImageFunction< ImageType > InterpolatorType;
-  typedef itk::AffineTransform< double, Dimension > TransformType;
-
-  typedef itk::MaximumProjectionImageFilter< ImageType, RImageType > MIPFilterType;
-
-  typedef itk::FillROIImageFilter< ImageType > FillROIFilterType;
   typedef itk::StitchingSharedData< ImageType > SharedDataType;
 
   /* 1. CREATE AN OBJECT */
@@ -108,7 +91,6 @@ int main ( int argc, char* argv[] )
   opt->addUsage( "" );
   opt->addUsage( " iSettings file directory " );
   opt->addUsage( " iTile directories " );
-  opt->addUsage( " oStitched plane directories " );
   opt->addUsage( " -h   --help    Prints this help " );
   opt->addUsage( " -c   --channel 0   (default) channel value" );
   opt->addUsage( " -t   --time    0   (default) timepoint" );
