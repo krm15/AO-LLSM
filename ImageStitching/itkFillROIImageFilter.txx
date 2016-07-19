@@ -209,7 +209,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
     {
       for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++, counter++ )
       {
-        //std::cout << i << ' ' << j << ' ' << k << std::endl;
         if ( counter%(m_NumOfValidThreads) == threadId )
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
@@ -217,6 +216,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
           //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
+	    //std::cout << i << ' ' << j << ' ' << k << std::endl;
             currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[0][k];
             currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[1][k];
             currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
@@ -226,6 +226,14 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i];
             clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j];
             clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
+	    
+	    for( unsigned int ii = 0; ii < ImageDimension; ii++ )
+	    {
+	      if ( clipTileOrigin[ii] < currentTileOrigin[ii] )
+	      {
+		clipTileOrigin[ii] = currentTileOrigin[ii];
+	      }
+	    }
 
             //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
