@@ -247,15 +247,15 @@ RegisterTiles()
   movingImage->SetOrigin( morigin );
   movingImage->SetSpacing( m_TileSpacing );
   
-  WriterPointer writer1 = WriterType::New();
-  writer1->SetInput( staticImage );
-  writer1->SetFileName( "/home/krm15/output/static.mha" );
-  writer1->Update();
-
-  WriterPointer writer2 = WriterType::New();
-  writer2->SetInput( movingImage );
-  writer2->SetFileName( "/home/krm15/output/moving.mha" );
-  writer2->Update();  
+//   WriterPointer writer1 = WriterType::New();
+//   writer1->SetInput( staticImage );
+//   writer1->SetFileName( "/home/krm15/output/static.mha" );
+//   writer1->Update();
+// 
+//   WriterPointer writer2 = WriterType::New();
+//   writer2->SetInput( movingImage );
+//   writer2->SetFileName( "/home/krm15/output/moving.mha" );
+//   writer2->Update();  
   
   RegionType sROI, mROI;
   PointType norigin;
