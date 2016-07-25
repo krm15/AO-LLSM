@@ -223,9 +223,9 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 
             //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
-            clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i];
-            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j];
-            clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
+            clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i] + m_SharedData->m_TileEffectiveOffset[1][k];
+            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j] + m_SharedData->m_TileEffectiveOffset[0][k];
+            clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k] + m_SharedData->m_TileEffectiveOffset[2][k];
 	    
 	    for( unsigned int ii = 0; ii < ImageDimension; ii++ )
 	    {
@@ -286,8 +286,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 	      //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
 	    }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
-	    
-	    
 
             //std::cout << "ROI filtering complete " << std::endl;
 

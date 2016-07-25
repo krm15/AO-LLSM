@@ -39,6 +39,7 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkImageFileReader.h"
+#include "itkImageFileWriter.h"
 #include "itkPermuteAxesImageFilter.h"
 #include "itkRichardsonLucyDeconvolutionImageFilter.h"
 #include "itkStitchingSharedData.h"
@@ -90,6 +91,9 @@ public:
 
   typedef RegionOfInterestImageFilter< ImageType, ImageType > ROIFilter3DType;
   typedef typename ROIFilter3DType::Pointer ROIFilter3DPointer;
+  
+  typedef ImageFileWriter< ImageType > WriterType;
+  typedef typename WriterType::Pointer WriterPointer;
 
   typedef Image< double, 2 > RImageType;
   typedef typename RImageType::Pointer RImagePointer;
