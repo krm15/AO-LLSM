@@ -247,10 +247,23 @@ int main ( int argc, char* argv[] )
       m_ScanStart[k] = temp;
     }
   }
+  
   std::cout << "X tiles: " << m_ScanStart[0] << ' ' << m_ScanEnd[0] << std::endl;
   std::cout << "Y tiles: " << m_ScanStart[1] << ' ' << m_ScanEnd[1] << std::endl;
   std::cout << "Z tiles: " << m_ScanStart[2] << ' ' << m_ScanEnd[2] << std::endl;
       
+  
+  for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
+  {
+    for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
+    {
+      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++, counter++ )
+      {
+        //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
+        std::cout << m_SharedData->m_TileFileNameArray[i][j][k] << std::endl;  
+      }
+    }
+  }
   //delete opt;
 
   return EXIT_SUCCESS;
