@@ -247,8 +247,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             //std::cout << "Clip Tile Size " << clipTileSize << std::endl;
 
             ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
-	    
-	    // Add the offset to the tileImageOrigin
             tileImage->SetOrigin( currentTileOrigin );
             
 	    SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
@@ -288,6 +286,8 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 	      //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
 	    }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
+	    
+	    
 
             //std::cout << "ROI filtering complete " << std::endl;
 

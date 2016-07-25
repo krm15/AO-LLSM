@@ -93,6 +93,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " begin index " );
   opt->addUsage( " end index " );
   opt->addUsage( " -h   --help    Prints this help " );
+  opt->addUsage( " -p   --physical Physical or image coordinates " );
   opt->addUsage( " -c   --channel 0   (default) channel value" );
   opt->addUsage( " -t   --time    0   (default) timepoint" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
@@ -106,7 +107,8 @@ int main ( int argc, char* argv[] )
 
   /* a flag (takes no argument), supporting long and short form */
   opt->setFlag(  "help",  'h' );
-
+  opt->setFlag(  "Physical",  'p' );
+  
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
   opt->setOption(  "time",    't' );
@@ -201,16 +203,36 @@ int main ( int argc, char* argv[] )
 
   // beginCorner or endCorner
   IndexType beginIndex, endIndex;
-  beginIndex[0] = atoi( argv[3] );
-  beginIndex[1] = atoi( argv[4] );
-  beginIndex[2] = atoi( argv[5] );
-  endIndex[0] = atoi( argv[6] );
-  endIndex[1] = atoi( argv[7] );
-  endIndex[2] = atoi( argv[8] );
-  
   PointType beginCorner, endCorner;
-  settingsReader->GetStitchedImage()->TransformIndexToPhysicalPoint( beginIndex, beginCorner );
-  settingsReader->GetStitchedImage()->TransformIndexToPhysicalPoint( endIndex, endCorner );
+ 
+  if( opt->getFlag( "physical" ) || opt->getFlag( 'p' ) )
+  {
+    beginCorner[0] = atoi( argv[3] );
+    beginCorner[1] = atoi( argv[4] );
+    beginCorner[2] = atoi( argv[5] );
+    endCorner[0] = atoi( argv[6] );
+    endCorner[1] = atoi( argv[7] );
+    endCorner[2] = atoi( argv[8] );
+    
+    settingsReader->GetStitchedImage()->TransformPhysicalPointToIndex( beginCorner, beginIndex );
+    settingsReader->GetStitchedImage()->TransformPhysicalPointToIndex( endCorner, endIndex );
+  }
+  else
+  {
+    beginIndex[0] = atoi( argv[3] );
+    beginIndex[1] = atoi( argv[4] );
+    beginIndex[2] = atoi( argv[5] );
+    endIndex[0] = atoi( argv[6] );
+    endIndex[1] = atoi( argv[7] );
+    endIndex[2] = atoi( argv[8] );
+  
+    settingsReader->GetStitchedImage()->TransformIndexToPhysicalPoint( beginIndex, beginCorner );
+    settingsReader->GetStitchedImage()->TransformIndexToPhysicalPoint( endIndex, endCorner );
+  }
+
+  std::cout << "Begin corner: " << beginCorner << std::endl;
+  std::cout << "End corner: " << beginCorner << std::endl;
+  
   IndexType m_ScanStart, m_ScanEnd;
   
   std::cout << "Setting scan start and end values for ROI" << std::endl;
@@ -257,7 +279,7 @@ int main ( int argc, char* argv[] )
   {
     for( unsigned int j = m_ScanStart[1]; j <= m_ScanEnd[1]; j++ )
     {
-      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++, counter++ )
+      for( unsigned int k = m_ScanStart[2]; k <= m_ScanEnd[2]; k++ )
       {
         //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
         std::cout << m_SharedData->m_TileFileNameArray[i][j][k] << std::endl;  
