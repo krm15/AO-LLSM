@@ -47,6 +47,7 @@
 #include "itkSettingsInfoExtractionFilter.h"
 #include "itkStitchingSharedData.h"
 #include "anyoption.h"
+#include "itkTimeProbe.h"
 
 int main ( int argc, char* argv[] )
 {
@@ -77,6 +78,10 @@ int main ( int argc, char* argv[] )
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
   typedef itk::StitchingSharedData< ImageType > SharedDataType;
 
+  // Measure time taken
+  itk::TimeProbe cputimer;
+  cputimer.Start();
+  
   /* 1. CREATE AN OBJECT */
   AnyOption *opt = new AnyOption();
 
@@ -202,6 +207,9 @@ int main ( int argc, char* argv[] )
   }
 
   settingsReader->Read();
+  
+  cputimer.Stop();
+  std::cout << "Registration took " << cputimer.GetMean() << " seconds" << std::endl;
 
   return EXIT_SUCCESS;
 }

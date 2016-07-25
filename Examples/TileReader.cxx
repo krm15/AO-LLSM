@@ -53,6 +53,7 @@
 #include "itkFillROIImageFilter.h"
 #include "itkStitchingSharedData.h"
 #include "anyoption.h"
+#include "itkTimeProbe.h"
 
 int main ( int argc, char* argv[] )
 {
@@ -90,6 +91,11 @@ int main ( int argc, char* argv[] )
 
   typedef itk::FillROIImageFilter< ImageType > FillROIFilterType;
   typedef itk::StitchingSharedData< ImageType > SharedDataType;
+  
+  
+  // Measure time taken
+  itk::TimeProbe cputimer;
+  cputimer.Start();
 
   /* 1. CREATE AN OBJECT */
   AnyOption *opt = new AnyOption();
@@ -457,6 +463,9 @@ int main ( int argc, char* argv[] )
     series_writer->Update();
   }
 
+  cputimer.Stop();
+  std::cout << "Stitching took " << cputimer.GetMean() << " seconds" << std::endl;  
+  
   //delete opt;
 
   return EXIT_SUCCESS;
