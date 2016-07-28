@@ -218,16 +218,16 @@ RegisterTiles()
     for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
     {
       if ( ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile].empty() ) &&
-	   ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile+1].empty() ) && 
-	   ( !tileForRegistration ) )
+           ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile+1].empty() ) &&
+           ( !tileForRegistration ) )
       {
-	tileForRegistration = true;
-	i_ = i;
-	j_ = j;
+        tileForRegistration = true;
+        i_ = i;
+        j_ = j;
       }
     }
   }
-  
+
 //  for( unsigned int ztile = 0; ztile < m_ZTile; ztile++ )
   {
     ReaderPointer sreader = ReaderType::New();
@@ -292,38 +292,38 @@ RegisterTiles()
       norigin[0] = morigin[0] + i;
       for( float j = -5.0; j <= 5.0; j+=0.5 )
       {
-	norigin[1] = morigin[1] + j;
-	for( float k = -2.0; k <= 2.0; k+=0.5 )
-	{
-	  std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;	
-	  norigin[2] = morigin[2] + k;
-	  movingImage->SetOrigin( norigin );
-	  
-	  OverlapRegion( staticImage, movingImage, sROI, mROI );
-	  
-	  value = 0.0;
-	  IteratorType sIt( staticImage, sROI );
-	  IteratorType mIt( movingImage, mROI );
-	  sIt.GoToBegin();
-	  mIt.GoToBegin();
-	  while( !sIt.IsAtEnd() )
-	  {
-	    val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
-	    value += val1 * val1;
-	    ++sIt;
-	    ++mIt;
-	  }
-	  value /= sROI.GetNumberOfPixels();
-		  
-	  if ( value  < bestValue )
-	  {
-	    bestValue = value;
-	    besti = i;
-	    bestj = j;
-	    bestk = k;
-	    std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-	  }
-	}
+        norigin[1] = morigin[1] + j;
+        for( float k = -2.0; k <= 2.0; k+=0.5 )
+        {
+          std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
+          norigin[2] = morigin[2] + k;
+          movingImage->SetOrigin( norigin );
+
+          OverlapRegion( staticImage, movingImage, sROI, mROI );
+
+          value = 0.0;
+          IteratorType sIt( staticImage, sROI );
+          IteratorType mIt( movingImage, mROI );
+          sIt.GoToBegin();
+          mIt.GoToBegin();
+          while( !sIt.IsAtEnd() )
+          {
+            val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
+            value += val1 * val1;
+            ++sIt;
+            ++mIt;
+          }
+          value /= sROI.GetNumberOfPixels();
+
+          if ( value  < bestValue )
+          {
+            bestValue = value;
+            besti = i;
+            bestj = j;
+            bestk = k;
+            std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
+          }
+        }
       }
     }
     std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
@@ -363,8 +363,8 @@ ReadOffsetFile()
       std::stringstream valueStream( line );
       for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
       {
-	std::getline ( valueStream, value, ' ' );
-	m_SharedData->m_TileOffset[i][j] += atof( value.c_str() );
+        std::getline ( valueStream, value, ' ' );
+        m_SharedData->m_TileOffset[i][j] += atof( value.c_str() );
       }
     }
     os.close();
