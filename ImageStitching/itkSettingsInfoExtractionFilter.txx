@@ -128,11 +128,34 @@ UpdateTileCoverage( std::istream& os )
   {
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
-      unsigned int temp =  m_TileInfoValue[i][j];
+      unsigned int temp =  m_TileInfoValue[i][j];// range is m_TileNumber[j]
       m_SharedData->m_TileCover[j][0][0][temp] = m_TransformedTileInfoValue[i][j+3];
       m_SharedData->m_TileCover[j][1][0][temp] = m_TransformedTileInfoValue[i][j+6];
     }
   }
+
+  // HACK
+  for( unsigned int j = 0; j < ImageDimension; j++ )
+  {
+    bool sign = true;
+    if ( m_SharedData->m_TileCover[j][0][0][0] > m_SharedData->m_TileCover[j][0][0][1] )
+    {
+      sign = false;
+    }
+
+    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
+    {
+       m_SharedData->m_TileCover[j][0][0][k] = ( k * ( m_TileSize[j] -  m_TileOverlap[j]) );
+
+       if (!sign)
+       {
+         m_SharedData->m_TileCover[j][0][0][k] = -m_SharedData->m_TileCover[j][0][0][k];
+       }
+
+       m_SharedData->m_TileCover[j][1][0][k] = m_SharedData->m_TileCover[j][0][0][k] + m_TileSize[j];
+    }
+  }
+
 
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
@@ -376,7 +399,9 @@ ReadOffsetFile()
     m_SharedData->m_TileEffectiveOffset[i][0] = 0.0;
     for( unsigned int j = 1; j < m_TileNumber[2]; j++ )
     {
-      m_SharedData->m_TileEffectiveOffset[i][j] = m_SharedData->m_TileEffectiveOffset[i][j-1] + m_SharedData->m_TileOffset[i][j];
+      m_SharedData->m_TileEffectiveOffset[i][j] =
+          m_SharedData->m_TileEffectiveOffset[i][j-1] +
+          m_SharedData->m_TileOffset[i][j];
     }
   }
 }
@@ -660,6 +685,27 @@ Read()
     reader->SetFileName ( m_SampleName );
     reader->Update();
     ImagePointer currentImage = reader->GetOutput();
+
+//    const DictionaryType & dictionary = reader->GetImageIO()->GetMetaDataDictionary();
+//    typename DictionaryType::ConstIterator itr = dictionary.Begin();
+//    typename DictionaryType::ConstIterator end = dictionary.End();
+
+//    unsigned int count = 0;
+//    while( itr != end )
+//    {
+//      std::cout << count++ << std::endl;
+//      typename MetaDataObjectBase::Pointer entry = itr->second;
+//      typename MetaDataStringType::Pointer entryValue = dynamic_cast<MetaDataStringType *> (
+//            entry.GetPointer() );
+
+//      if ( entryValue )
+//      {
+//        std::string tagkey = itr->first;
+//        std::cout << "MetaDataDict " << tagkey << ": " << entryValue->GetMetaDataObjectValue() << std::endl;
+//      }
+//      ++itr;
+//    }
+
     m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
     m_TileSpacing[0] = m_TileSize[1]/m_TileDimension[0];

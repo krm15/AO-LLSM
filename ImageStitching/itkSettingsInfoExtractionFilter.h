@@ -64,6 +64,8 @@
 #include "itkStitchingSharedData.h"
 #include "itkFillROIImageFilter.h"
 #include "itkHistogramMatchingImageFilter.h"
+#include "itkMetaDataDictionary.h"
+#include "itkMetaDataObject.h"
 
 #include "itkImageFileWriter.h"
 
@@ -122,6 +124,9 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
 
   typedef FillROIImageFilter< ImageType > FillROIFilterType;
   typedef typename FillROIFilterType::Pointer FillROIFilterPointer;
+
+  typedef MetaDataDictionary DictionaryType;
+  typedef MetaDataObject< std::string > MetaDataStringType;
 
   void Read();
   void UpdateFileNameLookup( std::istream& os );

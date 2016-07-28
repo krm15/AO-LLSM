@@ -216,7 +216,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
           //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
-	    //std::cout << i << ' ' << j << ' ' << k << std::endl;
+      //std::cout << i << ' ' << j << ' ' << k << std::endl;
             currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[1][k];
             currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[0][k];
             currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
@@ -227,15 +227,15 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j] + m_SharedData->m_TileEffectiveOffset[0][k];
             clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];// + m_SharedData->m_TileEffectiveOffset[2][k];
 	    
-	    // z tiles dont move together...need to change clip sizes as well.
-	    
-	    for( unsigned int ii = 0; ii < ImageDimension; ii++ )
-	    {
-	      if ( clipTileOrigin[ii] < currentTileOrigin[ii] )
-	      {
-		clipTileOrigin[ii] = currentTileOrigin[ii];
-	      }
-	    }
+      // z tiles dont move together...need to change clip sizes as well.
+
+      for( unsigned int ii = 0; ii < ImageDimension; ii++ )
+      {
+        if ( clipTileOrigin[ii] < currentTileOrigin[ii] )
+        {
+    clipTileOrigin[ii] = currentTileOrigin[ii];
+        }
+      }
 
             //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
@@ -251,7 +251,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             ImagePointer tileImage = ExtractCorrectedAndFlippedTile( filename );
             tileImage->SetOrigin( currentTileOrigin );
             
-	    SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
+      SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
 
             //std::cout << "Extraction complete" << std::endl;
 
@@ -285,8 +285,8 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             }
             else
             {
-	      //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
-	    }
+        //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
+      }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
 
             //std::cout << "ROI filtering complete " << std::endl;
