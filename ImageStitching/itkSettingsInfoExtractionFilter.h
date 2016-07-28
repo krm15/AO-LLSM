@@ -167,11 +167,12 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( RegisterZTiles,      bool );
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
-  itkSetMacro( OffsetFilePath,          std::string );
+  itkSetMacro( OffsetFilePath,      std::string );
   itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
-  itkSetMacro( ZTile,               unsigned int );
+  itkSetMacro( ZTileStart,          unsigned int );
+  itkSetMacro( ZTileEnd,            unsigned int );
   itkSetObjectMacro( SharedData, SharedDataType );
 
   protected:
@@ -226,7 +227,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   IndexType     m_StitchIndex;
   RegionType    m_StitchRegion;
 
-  unsigned int      m_ZTile;
+  unsigned int      m_ZTileStart;
+  unsigned int      m_ZTileEnd;
   bool              m_RegisterZTiles;
   SharedDataPointer m_SharedData;
 

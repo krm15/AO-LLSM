@@ -54,7 +54,8 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_ChannelPrefix = "_ch";
   m_RegisterZTiles = false;
   m_SharedData = ITK_NULLPTR;
-  m_ZTile = 0;
+  m_ZTileStart = 0;
+  m_ZTileEnd = 0;
 }
 
 
@@ -227,40 +228,45 @@ RegisterTiles()
 
   bool tileForRegistration = false;
   unsigned int i_,j_;
-  
-  i_ = m_TileNumber[0]/2;
-  j_ = m_TileNumber[1]/2;
-  if ( ( !m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile].empty() ) &&
-	( !m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile+1].empty() ) )
+
+  if ( m_ZTileEnd > m_TileNumber[2]-1 )
   {
-    tileForRegistration = true;
+    m_ZTileEnd = m_TileNumber[2]-1;
   }
-      
-  for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
-  {
-    for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
+  
+  for( unsigned int ztile = m_ZTileStart; ztile < m_ZTileEnd; ztile++ )
+  {    
+    i_ = m_TileNumber[0]/2;
+    j_ = m_TileNumber[1]/2;
+    if ( ( !m_SharedData->m_TileFileNameArray[i_][j_][ztile].empty() ) &&
+    ( !m_SharedData->m_TileFileNameArray[i_][j_][ztile+1].empty() ) )
     {
-      if ( ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile].empty() ) &&
-           ( !m_SharedData->m_TileFileNameArray[i][j][m_ZTile+1].empty() ) &&
-           ( !tileForRegistration ) )
+      tileForRegistration = true;
+    }
+
+    for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
+    {
+      for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
       {
-        tileForRegistration = true;
-        i_ = i;
-        j_ = j;
+        if ( ( !m_SharedData->m_TileFileNameArray[i][j][ztile].empty() ) &&
+             ( !m_SharedData->m_TileFileNameArray[i][j][ztile+1].empty() ) &&
+             ( !tileForRegistration ) )
+        {
+          tileForRegistration = true;
+          i_ = i;
+          j_ = j;
+        }
       }
     }
-  }
 
-//  for( unsigned int ztile = 0; ztile < m_ZTile; ztile++ )
-  {
     ReaderPointer sreader = ReaderType::New();
-    sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile] );
+    sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][ztile] );
     sreader->Update();
     ImagePointer staticImage = sreader->GetOutput();
     staticImage->DisconnectPipeline();
     
     ReaderPointer mreader = ReaderType::New();
-    mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile+1] );
+    mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] );
     mreader->Update();
     ImagePointer movingImage = mreader->GetOutput();
     movingImage->DisconnectPipeline();
@@ -350,9 +356,9 @@ RegisterTiles()
       }
     }
     std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-    m_SharedData->m_TileOffset[0][m_ZTile+1] = besti;
-    m_SharedData->m_TileOffset[1][m_ZTile+1] = bestj;
-    m_SharedData->m_TileOffset[2][m_ZTile+1] = bestk;  
+    m_SharedData->m_TileOffset[0][ztile+1] = besti;
+    m_SharedData->m_TileOffset[1][ztile+1] = bestj;
+    m_SharedData->m_TileOffset[2][ztile+1] = bestk;
   }
 
   // Write out the offsets
@@ -412,26 +418,36 @@ void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 WriteOffsetFile()
 {
-  std::stringstream filename;
-  filename << m_OffsetFilePath << (m_ZTile+1) << ".txt";
-  std::ofstream os ( filename.str().c_str() );
-
-  if ( !os )
+  for( unsigned int id = m_ZTileStart+1; id <= m_ZTileEnd; id++  )
   {
-    std::cout << "error in offset file opening" << std::endl;
-    return;
-  }
+    std::stringstream filename;
+    filename << m_OffsetFilePath << id << ".txt";
+    std::ofstream os ( filename.str().c_str() );
 
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
+    if ( !os )
     {
-      os << m_SharedData->m_TileOffset[i][j] << ' ';
+      std::cout << "error in offset file opening" << std::endl;
+      return;
     }
-    os << std::endl;
-  }
 
-  os.close();
+    for( unsigned int i = 0; i < ImageDimension; i++ )
+    {
+      for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
+      {
+        if ( j+1 == id )
+        {
+          os << m_SharedData->m_TileOffset[i][j] << ' ';
+        }
+        else
+        {
+          os << 0.0 << ' ';
+        }
+      }
+      os << std::endl;
+    }
+
+    os.close();
+  }
 }
 
 

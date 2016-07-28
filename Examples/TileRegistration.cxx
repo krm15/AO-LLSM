@@ -104,6 +104,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
   opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
   opt->addUsage( " -s   --zstart  0   (default) z tile" );
+  opt->addUsage( " -e   --zend    1   (default) z tile" );
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -123,6 +124,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "offset",  'o' );
   opt->setOption(  "reg",     'r' );
   opt->setOption(  "zstart",  's' );
+  opt->setOption(  "zend",    'e' );
 
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
@@ -141,6 +143,7 @@ int main ( int argc, char* argv[] )
   unsigned int ch = 0;
   unsigned int tp = 0;
   unsigned int zStart = 0;
+  unsigned int zEnd = 0;
   std::string OffsetFilePath = "~/";
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
@@ -179,6 +182,10 @@ int main ( int argc, char* argv[] )
   {
     zStart = atoi( opt->getValue( 's' ) );
   }
+  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
+  {
+    zStart = atoi( opt->getValue( 'e' ) );
+  }
 
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
 
@@ -199,7 +206,8 @@ int main ( int argc, char* argv[] )
   if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )
   {
     settingsReader->SetRegisterZTiles( 1 );
-    settingsReader->SetZTile( zStart );
+    settingsReader->SetZTileStart( zStart );
+    settingsReader->SetZTileEnd( zEnd );
   }
   else
   {
