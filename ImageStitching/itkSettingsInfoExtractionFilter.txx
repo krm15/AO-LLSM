@@ -228,106 +228,109 @@ RegisterTiles()
     }
   }
   
-  ReaderPointer sreader = ReaderType::New();
-  sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile] );
-  sreader->Update();
-  ImagePointer staticImage = sreader->GetOutput();
-  staticImage->DisconnectPipeline();
-  
-  ReaderPointer mreader = ReaderType::New();
-  mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile+1] );
-  mreader->Update();
-  ImagePointer movingImage = mreader->GetOutput();
-  movingImage->DisconnectPipeline();
-  
-  PointType sorigin;
-  sorigin[0] = 0.0;
-  sorigin[1] = 0.0;
-  sorigin[2] = 0.0;
-   
-  PointType morigin;
-  morigin[0] = 0.0;
-  morigin[1] = 0.0;
-  morigin[2] = m_TileSize[2] - m_TileOverlap[2];
+//  for( unsigned int ztile = 0; ztile < m_ZTile; ztile++ )
+  {
+    ReaderPointer sreader = ReaderType::New();
+    sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile] );
+    sreader->Update();
+    ImagePointer staticImage = sreader->GetOutput();
+    staticImage->DisconnectPipeline();
+    
+    ReaderPointer mreader = ReaderType::New();
+    mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][m_ZTile+1] );
+    mreader->Update();
+    ImagePointer movingImage = mreader->GetOutput();
+    movingImage->DisconnectPipeline();
+    
+    PointType sorigin;
+    sorigin[0] = 0.0;
+    sorigin[1] = 0.0;
+    sorigin[2] = 0.0;
+    
+    PointType morigin;
+    morigin[0] = 0.0;
+    morigin[1] = 0.0;
+    morigin[2] = m_TileSize[2] - m_TileOverlap[2];
 
-  staticImage->SetOrigin( sorigin );
-  staticImage->SetSpacing( m_TileSpacing );
-  movingImage->SetOrigin( morigin );
-  movingImage->SetSpacing( m_TileSpacing );
-  
-//   WriterPointer writer1 = WriterType::New();
-//   writer1->SetInput( staticImage );
-//   writer1->SetFileName( "/home/krm15/output/static.mha" );
-//   writer1->Update();
-// 
-//   WriterPointer writer2 = WriterType::New();
-//   writer2->SetInput( movingImage );
-//   writer2->SetFileName( "/home/krm15/output/moving.mha" );
-//   writer2->Update();  
-  
-  RegionType sROI, mROI;
-  PointType norigin;
-  
-  double val1, val2;
-  OverlapRegion( staticImage, movingImage, sROI, mROI );
-  IteratorType sIt( staticImage, sROI );
-  IteratorType mIt( movingImage, mROI );
-  sIt.GoToBegin();
-  mIt.GoToBegin();
-  while( !sIt.IsAtEnd() )
-  {
-    val1 += sIt.Get();
-    val2 += mIt.Get();
-    ++sIt;
-    ++mIt;
-  }
-  double scaleFactor = val1/val2;
-  
-  double bestValue = 1000000, besti, bestj, bestk, value;
-  value = bestValue;
-  for( float i = -5.0; i <= 5.0; i+=0.5 )
-  {
-    norigin[0] = morigin[0] + i;
-    for( float j = -5.0; j <= 5.0; j+=0.5 )
+    staticImage->SetOrigin( sorigin );
+    staticImage->SetSpacing( m_TileSpacing );
+    movingImage->SetOrigin( morigin );
+    movingImage->SetSpacing( m_TileSpacing );
+    
+  //   WriterPointer writer1 = WriterType::New();
+  //   writer1->SetInput( staticImage );
+  //   writer1->SetFileName( "/home/krm15/output/static.mha" );
+  //   writer1->Update();
+  // 
+  //   WriterPointer writer2 = WriterType::New();
+  //   writer2->SetInput( movingImage );
+  //   writer2->SetFileName( "/home/krm15/output/moving.mha" );
+  //   writer2->Update();  
+    
+    RegionType sROI, mROI;
+    PointType norigin;
+    
+    double val1, val2;
+    OverlapRegion( staticImage, movingImage, sROI, mROI );
+    IteratorType sIt( staticImage, sROI );
+    IteratorType mIt( movingImage, mROI );
+    sIt.GoToBegin();
+    mIt.GoToBegin();
+    while( !sIt.IsAtEnd() )
     {
-      norigin[1] = morigin[1] + j;
-      for( float k = -2.0; k <= 2.0; k+=0.5 )
+      val1 += sIt.Get();
+      val2 += mIt.Get();
+      ++sIt;
+      ++mIt;
+    }
+    double scaleFactor = val1/val2;
+    
+    double bestValue = 1000000, besti, bestj, bestk, value;
+    value = bestValue;
+    for( float i = -5.0; i <= 5.0; i+=0.5 )
+    {
+      norigin[0] = morigin[0] + i;
+      for( float j = -5.0; j <= 5.0; j+=0.5 )
       {
-	std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;	
-	norigin[2] = morigin[2] + k;
-	movingImage->SetOrigin( norigin );
-	
-	OverlapRegion( staticImage, movingImage, sROI, mROI );
-	
-	value = 0.0;
-	IteratorType sIt( staticImage, sROI );
-	IteratorType mIt( movingImage, mROI );
-	sIt.GoToBegin();
-	mIt.GoToBegin();
-	while( !sIt.IsAtEnd() )
+	norigin[1] = morigin[1] + j;
+	for( float k = -2.0; k <= 2.0; k+=0.5 )
 	{
-	  val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
-	  value += val1 * val1;
-	  ++sIt;
-	  ++mIt;
+	  std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;	
+	  norigin[2] = morigin[2] + k;
+	  movingImage->SetOrigin( norigin );
+	  
+	  OverlapRegion( staticImage, movingImage, sROI, mROI );
+	  
+	  value = 0.0;
+	  IteratorType sIt( staticImage, sROI );
+	  IteratorType mIt( movingImage, mROI );
+	  sIt.GoToBegin();
+	  mIt.GoToBegin();
+	  while( !sIt.IsAtEnd() )
+	  {
+	    val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
+	    value += val1 * val1;
+	    ++sIt;
+	    ++mIt;
+	  }
+	  value /= sROI.GetNumberOfPixels();
+		  
+	  if ( value  < bestValue )
+	  {
+	    bestValue = value;
+	    besti = i;
+	    bestj = j;
+	    bestk = k;
+	    std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
+	  }
 	}
-	value /= sROI.GetNumberOfPixels();
-		
-        if ( value  < bestValue )
-        {
-          bestValue = value;
-          besti = i;
-          bestj = j;
-          bestk = k;
-          std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-        }
       }
     }
+    std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
+    m_SharedData->m_TileOffset[0][m_ZTile+1] = besti;
+    m_SharedData->m_TileOffset[1][m_ZTile+1] = bestj;
+    m_SharedData->m_TileOffset[2][m_ZTile+1] = bestk;  
   }
-  std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-  m_SharedData->m_TileOffset[0][m_ZTile+1] = besti;
-  m_SharedData->m_TileOffset[1][m_ZTile+1] = bestj;
-  m_SharedData->m_TileOffset[2][m_ZTile+1] = bestk;
 
   // Write out the offsets
   if ( !m_OffsetFilePath.empty() )
