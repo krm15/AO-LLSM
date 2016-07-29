@@ -173,6 +173,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( TimePoint,           unsigned int );
   itkSetMacro( ZTileStart,          unsigned int );
   itkSetMacro( ZTileEnd,            unsigned int );
+  itkSetMacro( StepLength,          double );
+  itkSetMacro( SearchRadius,        double );
   itkSetObjectMacro( SharedData, SharedDataType );
 
   protected:
@@ -231,6 +233,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   unsigned int      m_ZTileEnd;
   bool              m_RegisterZTiles;
   SharedDataPointer m_SharedData;
+  double            m_SearchRadius;
+  double            m_StepLength;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

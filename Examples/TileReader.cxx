@@ -154,7 +154,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "sxy",     'p' );
   opt->setOption(  "sz",      'q' );
   opt->setOption(  "offset",  'o' );
-
+    
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
   separated options or flags, one per line */
@@ -185,6 +185,8 @@ int main ( int argc, char* argv[] )
   bool subsample = false;
   bool mip = false;
 
+  
+  
   /* 6. GET THE VALUES */
   if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
   {

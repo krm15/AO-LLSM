@@ -105,6 +105,8 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
   opt->addUsage( " -s   --zstart  0   (default) z tile" );
   opt->addUsage( " -e   --zend    1   (default) z tile" );
+  opt->addUsage( " -r   --radius  5.0 (default) search radius" );
+  opt->addUsage( " -l   --step    5.0 (default) step length" );  
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -125,7 +127,9 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "reg",     'r' );
   opt->setOption(  "zstart",  's' );
   opt->setOption(  "zend",    'e' );
-
+  opt->setOption(  "radius",  'r' );
+  opt->setOption(  "step",    'l' );
+  
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
   separated options or flags, one per line */
@@ -147,7 +151,9 @@ int main ( int argc, char* argv[] )
   std::string OffsetFilePath = "~/";
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
-
+  double stepLength = 0.5;
+  double searchRadius = 5.0;
+  
   if( opt->getArgc() < 2 )
   {
     std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
@@ -187,7 +193,15 @@ int main ( int argc, char* argv[] )
   {
     zEnd = atoi( opt->getValue( 'e' ) );
   }
-
+  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "step" ) != NULL  )
+  {
+    stepLength = atoi( opt->getValue( 'l' ) );
+  }
+    if( opt->getValue( 'r' ) != NULL  || opt->getValue( "radius" ) != NULL  )
+  {
+    searchRadius = atoi( opt->getValue( 'r' ) );
+  }
+  
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
@@ -207,6 +221,8 @@ int main ( int argc, char* argv[] )
   if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )
   {
     settingsReader->SetRegisterZTiles( 1 );
+    settingsReader->SetStepLength( stepLength );
+    settingsReader->SetSearchRadius( searchRadius );
     settingsReader->SetZTileStart( zStart );
     settingsReader->SetZTileEnd( zEnd );
   }

@@ -56,6 +56,8 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_SharedData = ITK_NULLPTR;
   m_ZTileStart = 0;
   m_ZTileEnd = 0;
+  m_StepLength = 0.5;
+  m_SearchRadius = 5.0;
 }
 
 
@@ -316,13 +318,13 @@ RegisterTiles()
     
     double bestValue = 1000000, besti, bestj, bestk, value;
     value = bestValue;
-    for( float i = -5.0; i <= 5.0; i+=0.5 )
+    for( float i = -m_SearchRadius; i <= m_SearchRadius; i+=m_StepLength )
     {
       norigin[0] = morigin[0] + i;
-      for( float j = -5.0; j <= 5.0; j+=0.5 )
+      for( float j = -m_SearchRadius; j <= m_SearchRadius; j+=m_StepLength )
       {
         norigin[1] = morigin[1] + j;
-        for( float k = -2.0; k <= 2.0; k+=0.5 )
+        for( float k = -2.0; k <= 2.0; k+=m_StepLength )
         {
           std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
           norigin[2] = morigin[2] + k;
