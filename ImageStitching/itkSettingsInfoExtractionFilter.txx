@@ -229,12 +229,12 @@ RegisterTiles()
   bool tileForRegistration = false;
   unsigned int i_,j_;
 
-  if ( m_ZTileEnd > m_TileNumber[2]-1 )
+  if ( m_ZTileEnd > m_TileNumber[2]-2 )
   {
-    m_ZTileEnd = m_TileNumber[2]-1;
+    m_ZTileEnd = m_TileNumber[2]-2;
   }
   
-  for( unsigned int ztile = m_ZTileStart; ztile < m_ZTileEnd; ztile++ )
+  for( unsigned int ztile = m_ZTileStart; ztile <= m_ZTileEnd; ztile++ )
   {    
     i_ = m_TileNumber[0]/2;
     j_ = m_TileNumber[1]/2;
@@ -417,11 +417,11 @@ template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
 WriteOffsetFile()
-{
-  for( unsigned int id = m_ZTileStart+1; id <= m_ZTileEnd; id++  )
-  {
+{ 
+  for( unsigned int id = m_ZTileStart; id <= m_ZTileEnd; id++  )
+  {    
     std::stringstream filename;
-    filename << m_OffsetFilePath << id << ".txt";
+    filename << m_OffsetFilePath << id+1 << ".txt";
     std::ofstream os ( filename.str().c_str() );
 
     if ( !os )
@@ -434,7 +434,7 @@ WriteOffsetFile()
     {
       for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
       {
-        if ( j+1 == id )
+        if ( j == id+1 )
         {
           os << m_SharedData->m_TileOffset[i][j] << ' ';
         }

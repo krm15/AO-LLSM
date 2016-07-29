@@ -143,7 +143,7 @@ int main ( int argc, char* argv[] )
   unsigned int ch = 0;
   unsigned int tp = 0;
   unsigned int zStart = 0;
-  unsigned int zEnd = 0;
+  unsigned int zEnd = 100;
   std::string OffsetFilePath = "~/";
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
@@ -181,10 +181,11 @@ int main ( int argc, char* argv[] )
   if( opt->getValue( 's' ) != NULL  || opt->getValue( "zstart" ) != NULL  )
   {
     zStart = atoi( opt->getValue( 's' ) );
+    zEnd = zStart;
   }
   if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
   {
-    zStart = atoi( opt->getValue( 'e' ) );
+    zEnd = atoi( opt->getValue( 'e' ) );
   }
 
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
