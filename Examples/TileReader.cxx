@@ -121,7 +121,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -l   --lsMap       (default) correction filename" );
-  opt->addUsage( " -d   --darkLevel 30 (default) correction threshold" );
+  opt->addUsage( " -t   --darkLevel 30 (default) correction threshold" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
   opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
