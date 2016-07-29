@@ -114,18 +114,18 @@ ReadCorrectionImage()
 
   RSizeType rsize = currentImage->GetLargestPossibleRegion().GetSize();
 
-  //std::cout << rsize << std::endl;
+  std::cout << "Correction map size: " << rsize << std::endl;
   //std::cout << m_TileDimension << std::endl;
 
   RIndexType rindex;
-  rindex[0] = 0.5*( rsize[0] - m_TileDimension[0] );
-  rindex[1] = 0.5*( rsize[1] - m_TileDimension[1] );
+  rindex[0] = 0.5*( rsize[0] - m_TileDimension[1] );
+  rindex[1] = 0.5*( rsize[1] - m_TileDimension[0] );
   rroi.SetIndex( rindex );
 
   //std::cout << rindex << std::endl;
 
-  rsize[0] = m_TileDimension[0];
-  rsize[1] = m_TileDimension[1];
+  rsize[0] = m_TileDimension[1];
+  rsize[1] = m_TileDimension[0];
   rroi.SetSize( rsize );
 
   //std::cout << rsize << std::endl;
