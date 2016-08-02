@@ -121,14 +121,14 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -e   --zend    100 (default) z end plane" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -l   --lsMap       (default) correction filename" );
-  opt->addUsage( " -t   --darkLevel 30 (default) correction threshold" );
+  opt->addUsage( " -i   --darkLevel 30 (default) dark level intensity" );
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
   opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
   opt->addUsage( " -p   --sxy     1   (default) subsampling rate in X/Y" );
   opt->addUsage( " -q   --sz      1   (default) subsampling rate in Z" );
   opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
-  opt->addUsage( "" );
+  opt->addUsage( "" ); 
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
 
@@ -146,7 +146,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "zstart",  's' );
   opt->setOption(  "zend",    'e' );
   opt->setOption(  "lsMap",   'l' );
-  opt->setOption(  "thresh",  't' );
+  opt->setOption(  "thresh",  'i' );
   opt->setOption(  "var",     'v' );
   opt->setOption(  "threads", 'n' );
   opt->setOption(  "exp",     'x' );
@@ -219,9 +219,9 @@ int main ( int argc, char* argv[] )
   {
     zEnd = atoi( opt->getValue( 'e' ) );
   }
-  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "darkLevel" ) != NULL  )
+  if( opt->getValue( 'i' ) != NULL  || opt->getValue( "intensity" ) != NULL  )
   {
-    thresh = atof( opt->getValue( 'd' ) );
+    thresh = atof( opt->getValue( 'i' ) );
   }
   if( opt->getValue( 'v' ) != NULL  || opt->getValue( "var" ) != NULL  )
   {
@@ -298,7 +298,7 @@ int main ( int argc, char* argv[] )
   {
     lsMap = opt->getValue( 'l' );
     m_SharedData->SetCorrectionInfo( lsMap, var, thresh );
-    std::cout << "Read Correction map" << std::endl;
+    std::cout << "Read Correction map with dark level and variance of "  << thresh << ' ' << var << std::endl;
   }
 
   std::cout << "Number of tiles " << numOfTiles << std::endl;
