@@ -65,6 +65,8 @@ class StitchingSharedData : public Object
   itkSetMacro( PSFPath,                  std::string );
   itkGetConstMacro( TileFileNameArray,   StringArray3DType );
   itkGetConstMacro( CorrectionThreshold, double );
+  itkGetConstMacro( CorrectionVariance, double );
+  itkGetConstMacro( CorrectionFilename, std::string );
 
   void SetCorrectionInfo( std::string& iName, double& var, double& thresh )
   {

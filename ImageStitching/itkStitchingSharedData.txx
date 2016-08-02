@@ -86,29 +86,33 @@ void
 StitchingSharedData< TInputImage >::
 ReadCorrectionImage()
 {
+  RSpacingType sp;
+  sp[0] = m_TileSpacing[0];
+  sp[1] = m_TileSpacing[1];
+
   // Read the correction image
   RReaderPointer reader = RReaderType::New();
   reader->SetFileName ( m_CorrectionFilename.c_str() );
   reader->Update();
 
+  RImagePointer inputImage = reader->GetOutput();
+  inputImage->DisconnectPipeline();
+  inputImage->SetSpacing( sp );
+
   GaussianFilterPointer gaussianFilter = GaussianFilterType::New();
-  gaussianFilter->SetInput( reader->GetOutput() );
+  gaussianFilter->SetInput( inputImage );
   gaussianFilter->SetVariance( m_CorrectionVariance );
   gaussianFilter->SetUseImageSpacingOn();
   gaussianFilter->Update();
 
   RImagePointer currentImage = gaussianFilter->GetOutput();
   currentImage->DisconnectPipeline();
+  currentImage->SetSpacing( sp );
 
   if ( !currentImage )
   {
       return;
   }
-
-  RSpacingType sp;
-  sp[0] = m_TileSpacing[0];
-  sp[1] = m_TileSpacing[1];
-  currentImage->SetSpacing( sp );
 
   RRegionType rroi;
 

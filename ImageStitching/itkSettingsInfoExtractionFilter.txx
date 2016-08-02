@@ -571,6 +571,20 @@ UpdateFileNameLookup( std::istream& os )
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( m_TileDirectory.c_str() );
 
+  std::vector< std::string > relevantFilenameVector;
+  searchStringCH << m_ChannelPrefix << m_ChannelNumber;
+  searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
+  for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
+  {
+    filename = directory->GetFile( m );
+
+    if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
+         ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
+    {
+      relevantFilenameVector.push_back( filename );
+    }
+  }
+
   m_SharedData->m_TileFileNameArray.resize( m_SettingFieldValue[0] );
   unsigned int m_TrueCountOfTiles = 0;
   for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
@@ -582,20 +596,20 @@ UpdateFileNameLookup( std::istream& os )
       for( unsigned int k = 0; k < m_TileNumber[2]; k++ )
       {
         m_SharedData->m_TileFileNameArray[i][j][k] = std::string();
-        searchStringCH << m_ChannelPrefix << m_ChannelNumber;
+        searchStringXYZT.str( std::string() );
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
         searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
 
-        for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
+        for ( unsigned int m = 0; m < relevantFilenameVector.size(); m++)
         {
-          filename = directory->GetFile( m );
+          filename = relevantFilenameVector[m];
 
           if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
                ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
           {
-            //std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
+            std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
             filename2 << m_TileDirectory << filename;
             m_SharedData->m_TileFileNameArray[i][j][k] = filename2.str();
 
@@ -610,8 +624,6 @@ UpdateFileNameLookup( std::istream& os )
           }
           filename2.str( std::string() );
         }
-        searchStringCH.str( std::string() );
-        searchStringXYZT.str( std::string() );
       }
     }
   }
