@@ -143,6 +143,11 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
     return  m_TileSize;
   }
 
+  ValueType * GetTileOverlap()
+  {
+    return  m_TileOverlap;
+  }
+
   ValueType * GetStitchSize()
   {
     return  m_StitchSize;

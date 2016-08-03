@@ -279,6 +279,9 @@ int main ( int argc, char* argv[] )
   double *tileSize;
   tileSize = settingsReader->GetTileSize();
 
+  double *tileOverlap;
+  tileOverlap = settingsReader->GetTileOverlap();
+
   SizeType tilePixelDimension = settingsReader->GetTileDimension();
   SpacingType spacing = settingsReader->GetTileSpacing();
 
@@ -312,6 +315,9 @@ int main ( int argc, char* argv[] )
   std::cout << tilePixelDimension << std::endl;
   std::cout << "Tile spacing" << std::endl;
   std::cout << spacing << std::endl;
+  std::cout << "Tile overlap" << std::endl;
+  std::cout << tileOverlap[0] << ' ' << tileOverlap[1]
+            << ' ' << tileOverlap[2] << std::endl;
 
   //settingsReader->CreateStitchedImage();
 

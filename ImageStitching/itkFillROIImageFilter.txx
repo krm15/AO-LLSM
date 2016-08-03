@@ -201,6 +201,8 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
   IndexType clipTileIndex;
   PointType clipTileOrigin;
 
+  std::cout << "ROI overall: " << m_ROI << std::endl;
+
   unsigned int counter = 0;
 
   for( unsigned int i = m_ScanStart[0]; i <= m_ScanEnd[0]; i++ )
@@ -213,15 +215,15 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-          //std::cout << filename.c_str() << std::endl;
+          std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
-            //std::cout << i << ' ' << j << ' ' << k << std::endl;
+            std::cout << i << ' ' << j << ' ' << k << std::endl;
             currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[1][k];
             currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[0][k];
             currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
 
-            //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
+            std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
             clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i] + m_SharedData->m_TileEffectiveOffset[1][k];
             clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j] + m_SharedData->m_TileEffectiveOffset[0][k];
@@ -230,6 +232,8 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             {
               clipTileOrigin[2] += m_SharedData->m_TileEffectiveOffset[2][k-1] + 0.5*m_SharedData->m_TileOffset[2][k];
             }
+
+            std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;
 
             for( unsigned int ii = 0; ii < ImageDimension; ii++ )
             {
@@ -246,11 +250,13 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
             SizeType m_TileDimension = tileImage->GetLargestPossibleRegion().GetSize();
             for( unsigned int ii = 0; ii < ImageDimension; ii++ )
             {
-              clipTileSize[i] = m_TileDimension[i] - clipTileIndex[i];
+              clipTileSize[ii] = m_TileDimension[ii] - clipTileIndex[ii];
             }
 
             roi.SetIndex( clipTileIndex );
             roi.SetSize( clipTileSize );
+
+            std::cout << "ROI for cropping: " << roi << std::endl;
 
             ImagePointer currentImage = tileImage;
             if ( !m_SingleZFill )
