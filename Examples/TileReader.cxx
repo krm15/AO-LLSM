@@ -462,6 +462,7 @@ int main ( int argc, char* argv[] )
     SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
     series_writer->SetInput( outputImage );
     series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
+    series_writer->SetUseCompression( 1 );
     series_writer->Update();
   }
 

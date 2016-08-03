@@ -318,13 +318,14 @@ RegisterTiles()
     
     double bestValue = 1000000, besti, bestj, bestk, value;
     value = bestValue;
+
     for( float i = -m_SearchRadius; i <= m_SearchRadius; i+=m_StepLength )
     {
       norigin[0] = morigin[0] + i;
       for( float j = -m_SearchRadius; j <= m_SearchRadius; j+=m_StepLength )
       {
         norigin[1] = morigin[1] + j;
-        for( float k = -2.0; k <= 2.0; k+=m_StepLength )
+        for( float k = -m_SearchRadius; k <= m_SearchRadius; k+=m_StepLength )
         {
           std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
           norigin[2] = morigin[2] + k;
@@ -364,6 +365,7 @@ RegisterTiles()
   }
 
   // Write out the offsets
+  std::cout << "Offset file path: " << m_OffsetFilePath << std::endl;
   if ( !m_OffsetFilePath.empty() )
   {
     WriteOffsetFile();
@@ -609,7 +611,7 @@ UpdateFileNameLookup( std::istream& os )
           if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
                ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
           {
-            std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
+            //std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
             filename2 << m_TileDirectory << filename;
             m_SharedData->m_TileFileNameArray[i][j][k] = filename2.str();
 

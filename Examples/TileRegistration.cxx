@@ -101,12 +101,12 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -t   --time    0   (default) timepoint" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
-  opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
+  opt->addUsage( " -o   --offset      (default) offset filename" );
   opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
   opt->addUsage( " -s   --zstart  0   (default) z tile" );
   opt->addUsage( " -e   --zend    1   (default) z tile" );
-  opt->addUsage( " -r   --radius  5.0 (default) search radius" );
-  opt->addUsage( " -l   --step    5.0 (default) step length" );  
+  opt->addUsage( " -l   --length  5.0 (default) search length" );
+  opt->addUsage( " -d   --delta   0.5 (default) delta step length" );
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -127,8 +127,8 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "reg",     'r' );
   opt->setOption(  "zstart",  's' );
   opt->setOption(  "zend",    'e' );
-  opt->setOption(  "radius",  'r' );
-  opt->setOption(  "step",    'l' );
+  opt->setOption(  "length",  'l' );
+  opt->setOption(  "delta",   'd' );
   
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
@@ -148,7 +148,7 @@ int main ( int argc, char* argv[] )
   unsigned int tp = 0;
   unsigned int zStart = 0;
   unsigned int zEnd = 100;
-  std::string OffsetFilePath = "~/";
+  std::string OffsetFilePath = "";
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
   double stepLength = 0.5;
@@ -193,13 +193,13 @@ int main ( int argc, char* argv[] )
   {
     zEnd = atoi( opt->getValue( 'e' ) );
   }
-  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "step" ) != NULL  )
+  if( opt->getValue( 'd' ) != NULL  || opt->getValue( "delta" ) != NULL  )
   {
-    stepLength = atoi( opt->getValue( 'l' ) );
+    stepLength = atof( opt->getValue( 'd' ) );
   }
-    if( opt->getValue( 'r' ) != NULL  || opt->getValue( "radius" ) != NULL  )
+    if( opt->getValue( 'l' ) != NULL  || opt->getValue( "length" ) != NULL  )
   {
-    searchRadius = atoi( opt->getValue( 'r' ) );
+    searchRadius = atof( opt->getValue( 'l' ) );
   }
   
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
