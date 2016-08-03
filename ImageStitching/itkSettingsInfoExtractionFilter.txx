@@ -327,7 +327,7 @@ RegisterTiles()
         norigin[1] = morigin[1] + j;
         for( float k = -m_SearchRadius; k <= m_SearchRadius; k+=m_StepLength )
         {
-          std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
+          //std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
           norigin[2] = morigin[2] + k;
           movingImage->SetOrigin( norigin );
 
