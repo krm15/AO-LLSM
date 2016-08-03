@@ -235,6 +235,16 @@ RegisterTiles()
   {
     m_ZTileEnd = m_TileNumber[2]-2;
   }
+
+  PointType sorigin;
+  sorigin[0] = 0.0;
+  sorigin[1] = 0.0;
+  sorigin[2] = 0.0;
+
+  PointType morigin;
+  morigin[0] = 0.0;
+  morigin[1] = 0.0;
+  morigin[2] = m_TileSize[2] - m_TileOverlap[2];
   
   for( unsigned int ztile = m_ZTileStart; ztile <= m_ZTileEnd; ztile++ )
   {    
@@ -272,20 +282,14 @@ RegisterTiles()
     mreader->Update();
     ImagePointer movingImage = mreader->GetOutput();
     movingImage->DisconnectPipeline();
-    
-    PointType sorigin;
-    sorigin[0] = 0.0;
-    sorigin[1] = 0.0;
-    sorigin[2] = 0.0;
-    
-    PointType morigin;
-    morigin[0] = 0.0;
-    morigin[1] = 0.0;
-    morigin[2] = m_TileSize[2] - m_TileOverlap[2];
+
+    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile] << std::endl;
+    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] << std::endl;
 
     staticImage->SetOrigin( sorigin );
-    staticImage->SetSpacing( m_TileSpacing );
     movingImage->SetOrigin( morigin );
+
+    staticImage->SetSpacing( m_TileSpacing );
     movingImage->SetSpacing( m_TileSpacing );
     
   //   WriterPointer writer1 = WriterType::New();
@@ -301,7 +305,7 @@ RegisterTiles()
     RegionType sROI, mROI;
     PointType norigin;
     
-    double val1, val2;
+    double val1(0.0), val2(0.0);
     OverlapRegion( staticImage, movingImage, sROI, mROI );
     IteratorType sIt( staticImage, sROI );
     IteratorType mIt( movingImage, mROI );
@@ -316,7 +320,7 @@ RegisterTiles()
     }
     double scaleFactor = val1/val2;
     
-    double bestValue = 1000000, besti, bestj, bestk, value;
+    double bestValue = std::numeric_limits<double>::max(), besti, bestj, bestk, value;
     value = bestValue;
 
     for( float i = -m_SearchRadius; i <= m_SearchRadius; i+=m_StepLength )
