@@ -243,8 +243,7 @@ int main ( int argc, char* argv[] )
 
     while( std::getline(ss, token, ',') )
     {
-      std::cout << token << std::endl;
-      sxy.push_back( token );
+      sxy.push_back( atof(token.c_str()) );
     }
   }
   else
