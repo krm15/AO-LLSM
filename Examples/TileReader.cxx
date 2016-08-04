@@ -125,8 +125,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -v   --var     2.0 (default) smoothing scale" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
   opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
-  opt->addUsage( " -p   --sxy     1   (default) subsampling rate in X/Y" );
-  opt->addUsage( " -q   --sz      1   (default) subsampling rate in Z" );
+  opt->addUsage( " -p   --sample  1,1 (default) subsampling rate" );
   opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
   opt->addUsage( "" ); 
 
@@ -151,8 +150,7 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "threads", 'n' );
   opt->setOption(  "exp",     'x' );
   opt->setOption(  "deconv",  'd' );
-  opt->setOption(  "sxy",     'p' );
-  opt->setOption(  "sz",      'q' );
+  opt->setOption(  "sample",     'p' );
   opt->setOption(  "offset",  'o' );
     
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
@@ -180,8 +178,8 @@ int main ( int argc, char* argv[] )
   double thresh = 104.0;
   double var = 100.0;
   unsigned int numOfThreads = 1;
-  double sxy = 1.0;
-  double sz = 1.0;
+
+  std::vector<double> sxy;
   bool subsample = false;
   bool mip = false;
 
@@ -235,15 +233,24 @@ int main ( int argc, char* argv[] )
   {
     searchCH = opt->getValue( 'x' );
   }
-  if( opt->getValue( 'p' ) != NULL  || opt->getValue( "sxy" ) != NULL  )
+  if( opt->getValue( 'p' ) != NULL  || opt->getValue( "sample" ) != NULL  )
   {
-    sxy = atof( opt->getValue( 'p' ) );
     subsample = true;
+
+    std::string input = opt->getValue( 'p' );
+    std::istringstream ss( input );
+    std::string token;
+
+    while( std::getline(ss, token, ',') )
+    {
+      std::cout << token << std::endl;
+      sxy.push_back( token );
+    }
   }
-  if( opt->getValue( 'q' ) != NULL  || opt->getValue( "sz" ) != NULL  )
+  else
   {
-    sz = atof( opt->getValue( 'q' ) );
-    subsample = true;
+    sxy.push_back( 1 );
+    sxy.push_back( 1 );
   }
 
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
@@ -391,18 +398,21 @@ int main ( int argc, char* argv[] )
   ImageType::SizeType nsize = roiSize;
   ImageType::PointType nOrigin = roiOrigin;
   ImageType::Pointer outputImage = fillROI->GetOutput();
-  if ( subsample )
+
+  for( unsigned int i = 0; i < sxy.size(); i += 2 )
   {
-    nspacing[0] = spacing[0]*sxy;
-    nspacing[1] = spacing[1]*sxy;
-    nspacing[2] = spacing[2]*sz;
+    double sXY = sxy[i];
+    double sZ = sxy[i+1];
+    nspacing[0] = spacing[0]*sXY;
+    nspacing[1] = spacing[1]*sXY;
+    nspacing[2] = spacing[2]*sZ;
 
     unsigned int t_zStart = vcl_ceil( (zStart * spacing[2])/nspacing[2] );
     unsigned int t_zEnd = vcl_floor( (zEnd * spacing[2])/nspacing[2] );
     nOrigin[2] = sOrigin[2] + t_zStart * nspacing[2];
 
-    nsize[0] /= sxy;
-    nsize[1] /= sxy;
+    nsize[0] /= sXY;
+    nsize[1] /= sXY;
     nsize[2] = t_zEnd - t_zStart + 1;
 
     // create the resample filter, transform and interpolator
@@ -422,54 +432,53 @@ int main ( int argc, char* argv[] )
     outputImage = resample->GetOutput();
     outputImage->DisconnectPipeline();
 
-    zStart = t_zStart;
-    zEnd = t_zEnd;
-  }
+    if ( mip )
+    {
+      MIPFilterType::Pointer mipFilter = MIPFilterType::New();
+      mipFilter->SetInput( outputImage );
+      mipFilter->SetProjectionDimension( 2 );
+      mipFilter->SetNumberOfThreads( numOfThreads );
+      mipFilter->Update();
 
-  if ( mip )
-  {
-    MIPFilterType::Pointer mipFilter = MIPFilterType::New();
-    mipFilter->SetInput( outputImage );
-    mipFilter->SetProjectionDimension( 2 );
-    mipFilter->SetNumberOfThreads( numOfThreads );
-    mipFilter->Update();
+      std::stringstream oFilename;
+      oFilename << argv[3] << settingsReader->GetChannelName();
+      oFilename << "_" << sXY << "_" << sZ << "s";
+      oFilename << "_" << ch << "ch" ;
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_zStart;
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_zEnd;
+      oFilename << "z.tif";
 
-    std::stringstream oFilename;
-    oFilename << argv[3] << settingsReader->GetChannelName();
-    oFilename << "_" << ch << "ch" ;
-    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
-    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << zStart;
-    oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << zEnd;
-    oFilename << "z.tif";
+      RWriterType::Pointer writer = RWriterType::New();
+      writer->SetInput( mipFilter->GetOutput() );
+      writer->SetFileName( oFilename.str() );
+      writer->Update();
+    }
+    else
+    {
+      std::stringstream oFilename;
+      oFilename << argv[3] << settingsReader->GetChannelName();
+      oFilename << "_" << sXY << "_" << sZ << "s";
+      oFilename << "_" << ch << "ch" ;
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
+      oFilename << "_%03dz.tif";
 
-    RWriterType::Pointer writer = RWriterType::New();
-    writer->SetInput( mipFilter->GetOutput() );
-    writer->SetFileName( oFilename.str() );
-    writer->Update();
-  }
-  else
-  {
-    std::stringstream oFilename;
-    oFilename << argv[3] << settingsReader->GetChannelName();
-    oFilename << "_" << ch << "ch" ;
-    oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
-    oFilename << "_%03dz.tif";
+      std::cout << oFilename.str().c_str() << std::endl;
 
-    std::cout << oFilename.str().c_str() << std::endl;
+      // Set filename format
+      NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
+      nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
+      nameGeneratorOutput->SetStartIndex( t_zStart );
+      nameGeneratorOutput->SetEndIndex( t_zEnd );
+      nameGeneratorOutput->SetIncrementIndex( 1 );
 
-    // Set filename format
-    NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
-    nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
-    nameGeneratorOutput->SetStartIndex( zStart );
-    nameGeneratorOutput->SetEndIndex( zEnd );
-    nameGeneratorOutput->SetIncrementIndex( 1 );
-
-    // Write out using Series writer
-    SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
-    series_writer->SetInput( outputImage );
-    series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
-    series_writer->SetUseCompression( 1 );
-    series_writer->Update();
+      // Write out using Series writer
+      SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
+      series_writer->SetInput( outputImage );
+      series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
+      series_writer->SetUseCompression( 1 );
+      series_writer->Update();
+    }
   }
 
   cputimer.Stop();
