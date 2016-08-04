@@ -397,6 +397,7 @@ int main ( int argc, char* argv[] )
   ImageType::SizeType nsize = roiSize;
   ImageType::PointType nOrigin = roiOrigin;
   ImageType::Pointer outputImage = fillROI->GetOutput();
+  outputImage->DisconnectPipeline();
 
   for( unsigned int i = 0; i < sxy.size(); i += 2 )
   {
@@ -425,16 +426,16 @@ int main ( int argc, char* argv[] )
     resample->SetSize ( nsize );
     resample->SetOutputOrigin ( nOrigin );
     resample->SetOutputSpacing ( nspacing );
-    resample->SetInput ( fillROI->GetOutput() );
+    resample->SetInput ( outputImage );
     resample->SetDefaultPixelValue ( 0 );
     resample->Update();
-    outputImage = resample->GetOutput();
-    outputImage->DisconnectPipeline();
+    ImageType::Pointer outputImage2 = resample->GetOutput();
+    outputImage2->DisconnectPipeline();
 
     if ( mip )
     {
       MIPFilterType::Pointer mipFilter = MIPFilterType::New();
-      mipFilter->SetInput( outputImage );
+      mipFilter->SetInput( outputImage2 );
       mipFilter->SetProjectionDimension( 2 );
       mipFilter->SetNumberOfThreads( numOfThreads );
       mipFilter->Update();
@@ -473,7 +474,7 @@ int main ( int argc, char* argv[] )
 
       // Write out using Series writer
       SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
-      series_writer->SetInput( outputImage );
+      series_writer->SetInput( outputImage2 );
       series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
       series_writer->SetUseCompression( 1 );
       series_writer->Update();

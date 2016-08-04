@@ -177,32 +177,32 @@ BeforeThreadedGenerateData()
 
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
-  for( unsigned int k = 0; k < ImageDimension; k++ )
+  for( unsigned int k = 0; k < ImageDimension-1; k++ )
   {
     double beginCorner = m_ROIOrigin[k];
     double endCorner = m_ROIOrigin[k] + m_ROI.GetSize()[k] * m_TileSpacing[k];
 
     //std::cout <<  beginCorner << ' ' << endCorner << std::endl;
     double scanStartVal = std::numeric_limits<double>::max();
-    double scanEndVal = std::numeric_limits<double>::min();
+    double scanEndVal   = std::numeric_limits<double>::min();
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
       //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
       //          << m_SharedData->m_TileCoverEnd[k][i] << std::endl;
-      if ( ( beginCorner >= m_SharedData->m_TileCover[k][0][0][i] - 0.0001 ) &&
-           ( beginCorner <= m_SharedData->m_TileCover[k][1][0][i] + 0.0001 ) &&
-           ( scanStartVal >= m_SharedData->m_TileCover[k][0][0][i] ) )
+      if ( ( beginCorner >= m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] - 0.0001 ) &&
+           ( beginCorner <= m_SharedData->m_TileCover[k][1][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] + 0.0001 ) &&
+           ( scanStartVal >= m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] ) )
       {
         m_ScanStart[k] = i;
-        scanStartVal =  m_SharedData->m_TileCover[k][0][0][i];
+        scanStartVal =  m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]];
       }
 
-      if ( ( endCorner >= m_SharedData->m_TileCover[k][0][0][i] - 0.001 ) &&
-           ( endCorner <= m_SharedData->m_TileCover[k][1][0][i] + 0.001 ) &&
-           ( scanEndVal <= m_SharedData->m_TileCover[k][1][0][i] ) )
+      if ( ( endCorner >= m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanEnd[2]] - 0.001 ) &&
+           ( endCorner <= m_SharedData->m_TileCover[k][1][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanEnd[2]] + 0.001 ) &&
+           ( scanEndVal <= m_SharedData->m_TileCover[k][1][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanEnd[2]] ) )
       {
         m_ScanEnd[k] = i;
-        scanEndVal =  m_SharedData->m_TileCover[k][1][0][i];
+        scanEndVal =  m_SharedData->m_TileCover[k][1][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanEnd[2]];
       }
     }
 
@@ -216,6 +216,7 @@ BeforeThreadedGenerateData()
 
     std::cout << m_ScanStart[k] << ' ' << m_ScanEnd[k] << std::endl;
   }
+  std::cout << m_ScanStart[2] << ' ' << m_ScanEnd[2] << std::endl;
 }
 
 
@@ -250,20 +251,20 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-          //std::cout << filename.c_str() << std::endl;
+          std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
             //std::cout << i << ' ' << j << ' ' << k << std::endl;
-            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[1][k];
-            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[0][k];
+            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[0][k];
+            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[1][k];
             currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
 
             //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
             clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i]
-                + m_SharedData->m_TileEffectiveOffset[1][k];
-            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j]
                 + m_SharedData->m_TileEffectiveOffset[0][k];
+            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j]
+                + m_SharedData->m_TileEffectiveOffset[1][k];
             clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
             if ( k > 0 )
             {

@@ -399,6 +399,15 @@ ReadOffsetFile()
           m_SharedData->m_TileOffset[i][j];
     }
   }
+
+  // Flip effective offsets
+  double temp;
+  for( unsigned int j = 1; j < m_TileNumber[2]; j++ )
+  {
+    temp = m_SharedData->m_TileEffectiveOffset[0][j];
+    m_SharedData->m_TileEffectiveOffset[0][j] = m_SharedData->m_TileEffectiveOffset[1][j];
+    m_SharedData->m_TileEffectiveOffset[1][j] = temp;
+  }
 }
 
 
