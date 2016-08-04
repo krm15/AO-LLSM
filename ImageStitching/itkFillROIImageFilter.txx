@@ -140,7 +140,41 @@ BeforeThreadedGenerateData()
     m_ScanStart[2] = m_ScanEnd[2] = m_ZTile;
     return;
   }
-  
+
+  double beginCornerZ = m_ROIOrigin[2];
+  double endCornerZ = m_ROIOrigin[2] + m_ROI.GetSize()[2] * m_TileSpacing[2];
+  {
+    double scanStartVal = std::numeric_limits<double>::max();
+    double scanEndVal = std::numeric_limits<double>::min();
+    for( unsigned int i = 0; i < m_TileNumber[2]; i++ )
+    {
+      //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
+      //          << m_SharedData->m_TileCoverEnd[k][i] << std::endl;
+      if ( ( beginCornerZ >= m_SharedData->m_TileCover[2][0][0][i] + m_SharedData->m_TileEffectiveOffset[2][i] - 0.0001 ) &&
+           ( beginCornerZ <= m_SharedData->m_TileCover[2][1][0][i] + m_SharedData->m_TileEffectiveOffset[2][i] + 0.0001 ) &&
+           ( scanStartVal >= m_SharedData->m_TileCover[2][0][0][i] + m_SharedData->m_TileEffectiveOffset[2][i] ) )
+      {
+        m_ScanStart[2] = i;
+        scanStartVal =  m_SharedData->m_TileCover[2][0][0][i] + m_SharedData->m_TileEffectiveOffset[2][i];
+      }
+
+      if ( ( endCornerZ >= m_SharedData->m_TileCover[2][0][0][i] + m_SharedData->m_TileEffectiveOffset[2][i] - 0.001 ) &&
+           ( endCornerZ <= m_SharedData->m_TileCover[2][1][0][i] + m_SharedData->m_TileEffectiveOffset[2][i] + 0.001 ) &&
+           ( scanEndVal <= m_SharedData->m_TileCover[2][1][0][i]  + m_SharedData->m_TileEffectiveOffset[2][i] ) )
+      {
+        m_ScanEnd[2] = i;
+        scanEndVal =  m_SharedData->m_TileCover[2][1][0][i] + m_SharedData->m_TileEffectiveOffset[2][i];
+      }
+    }
+    unsigned int temp;
+    if ( m_ScanStart[2] > m_ScanEnd[2] )
+    {
+      temp = m_ScanEnd[2];
+      m_ScanEnd[2] = m_ScanStart[2];
+      m_ScanStart[2] = temp;
+    }
+  }
+
   // Identify all the tiles that belong to this roi
   std::cout << "Setting scan start and end values for ROI" << std::endl;
   for( unsigned int k = 0; k < ImageDimension; k++ )
@@ -149,7 +183,8 @@ BeforeThreadedGenerateData()
     double endCorner = m_ROIOrigin[k] + m_ROI.GetSize()[k] * m_TileSpacing[k];
 
     //std::cout <<  beginCorner << ' ' << endCorner << std::endl;
-    double scanStartVal = 100000, scanEndVal = -100000;
+    double scanStartVal = std::numeric_limits<double>::max();
+    double scanEndVal = std::numeric_limits<double>::min();
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
       //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
@@ -201,7 +236,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
   IndexType clipTileIndex;
   PointType clipTileOrigin;
 
-  std::cout << "ROI overall: " << m_ROI << std::endl;
+  //std::cout << "ROI overall: " << m_ROI << std::endl;
 
   unsigned int counter = 0;
 
@@ -225,12 +260,15 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 
             //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
-            clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i] + m_SharedData->m_TileEffectiveOffset[1][k];
-            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j] + m_SharedData->m_TileEffectiveOffset[0][k];
+            clipTileOrigin[0] = m_SharedData->m_TileCover[0][0][1][i]
+                + m_SharedData->m_TileEffectiveOffset[1][k];
+            clipTileOrigin[1] = m_SharedData->m_TileCover[1][0][1][j]
+                + m_SharedData->m_TileEffectiveOffset[0][k];
             clipTileOrigin[2] = m_SharedData->m_TileCover[2][0][1][k];
             if ( k > 0 )
             {
-              clipTileOrigin[2] += m_SharedData->m_TileEffectiveOffset[2][k-1] + 0.5*m_SharedData->m_TileOffset[2][k];
+              clipTileOrigin[2] += m_SharedData->m_TileEffectiveOffset[2][k-1]
+                  + 0.5*m_SharedData->m_TileOffset[2][k];
             }
 
             //std::cout << "Clip Tile Origin " << clipTileOrigin << std::endl;

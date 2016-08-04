@@ -56,8 +56,8 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_SharedData = ITK_NULLPTR;
   m_ZTileStart = 0;
   m_ZTileEnd = 0;
-  m_StepLength = 0.5;
-  m_SearchRadius = 5.0;
+  //m_StepLength = 0.5;
+  //m_SearchRadius = 5.0;
 }
 
 
@@ -210,24 +210,8 @@ UpdateTileCoverage( std::istream& os )
 template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-RegisterTiles()
+RegisterTiles( float searchRadius, float stepLength )
 {
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    m_SharedData->m_TileOffset[i].resize( m_TileNumber[2], 0.0 );
-    m_SharedData->m_TileEffectiveOffset[i].resize( m_TileNumber[2], 0.0 );
-  }
-
-  if ( !m_RegisterZTiles )
-  {
-    // Read offset file
-    if ( !m_OffsetFilePath.empty() )
-    {
-      ReadOffsetFile();
-    }
-    return;
-  }
-
   bool tileForRegistration = false;
   unsigned int i_,j_;
 
@@ -236,16 +220,6 @@ RegisterTiles()
     m_ZTileEnd = m_TileNumber[2]-2;
   }
 
-  PointType sorigin;
-  sorigin[0] = 0.0;
-  sorigin[1] = 0.0;
-  sorigin[2] = 0.0;
-
-  PointType morigin;
-  morigin[0] = 0.0;
-  morigin[1] = 0.0;
-  morigin[2] = m_TileSize[2] - m_TileOverlap[2];
-  
   for( unsigned int ztile = m_ZTileStart; ztile <= m_ZTileEnd; ztile++ )
   {    
     i_ = m_TileNumber[0]/2;
@@ -283,8 +257,19 @@ RegisterTiles()
     ImagePointer movingImage = mreader->GetOutput();
     movingImage->DisconnectPipeline();
 
-    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile] << std::endl;
-    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] << std::endl;
+//    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile] << std::endl;
+//    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] << std::endl;
+
+    PointType sorigin;
+    sorigin[0] = 0.0;
+    sorigin[1] = 0.0;
+    sorigin[2] = 0.0;
+
+    PointType morigin;
+    morigin[0] = m_SharedData->m_TileOffset[0][ztile+1];
+    morigin[1] = m_SharedData->m_TileOffset[1][ztile+1];
+    morigin[2] = m_TileSize[2] - m_TileOverlap[2]
+        + m_SharedData->m_TileOffset[2][ztile+1];
 
     staticImage->SetOrigin( sorigin );
     movingImage->SetOrigin( morigin );
@@ -320,16 +305,17 @@ RegisterTiles()
     }
     double scaleFactor = val1/val2;
     
-    double bestValue = std::numeric_limits<double>::max(), besti, bestj, bestk, value;
+    double bestValue = std::numeric_limits<double>::max();
+    double besti, bestj, bestk, value;
     value = bestValue;
 
-    for( float i = -m_SearchRadius; i <= m_SearchRadius; i+=m_StepLength )
+    for( float i = -searchRadius; i <= searchRadius; i+=stepLength )
     {
       norigin[0] = morigin[0] + i;
-      for( float j = -m_SearchRadius; j <= m_SearchRadius; j+=m_StepLength )
+      for( float j = -searchRadius; j <= searchRadius; j+=stepLength )
       {
         norigin[1] = morigin[1] + j;
-        for( float k = -m_SearchRadius; k <= m_SearchRadius; k+=m_StepLength )
+        for( float k = -searchRadius; k <= searchRadius; k+=stepLength )
         {
           //std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
           norigin[2] = morigin[2] + k;
@@ -357,22 +343,17 @@ RegisterTiles()
             besti = i;
             bestj = j;
             bestk = k;
-            std::cout << "*****" << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
+            std::cout << "*****" << besti<< ' ' << bestj << ' '
+                      << bestk << ' ' << bestValue << std::endl;
           }
         }
       }
     }
-    std::cout << besti<< ' ' << bestj << ' ' << bestk << ' ' << bestValue << std::endl;
-    m_SharedData->m_TileOffset[0][ztile+1] = besti;
-    m_SharedData->m_TileOffset[1][ztile+1] = bestj;
-    m_SharedData->m_TileOffset[2][ztile+1] = bestk;
-  }
-
-  // Write out the offsets
-  std::cout << "Offset file path: " << m_OffsetFilePath << std::endl;
-  if ( !m_OffsetFilePath.empty() )
-  {
-    WriteOffsetFile();
+    std::cout << besti<< ' ' << bestj << ' ' <<
+                 bestk << ' ' << bestValue << std::endl;
+    m_SharedData->m_TileOffset[0][ztile+1] += besti;
+    m_SharedData->m_TileOffset[1][ztile+1] += bestj;
+    m_SharedData->m_TileOffset[2][ztile+1] += bestk;
   }
 }
 
@@ -758,8 +739,33 @@ Read()
   // Create a stitched image
   CreateStitchedImage();
 
-  // Register files
-  RegisterTiles();
+  // Register files  
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    m_SharedData->m_TileOffset[i].resize( m_TileNumber[2], 0.0 );
+    m_SharedData->m_TileEffectiveOffset[i].resize( m_TileNumber[2], 0.0 );
+  }
+
+  // Read offset file
+  if ( !m_OffsetFilePath.empty() )
+  {
+    ReadOffsetFile();
+  }
+
+  if ( m_RegisterZTiles )
+  {
+    for( unsigned int i = 0; i < m_SearchRadius.size(); i++ )
+    {
+      RegisterTiles( m_SearchRadius[i], m_StepLength[i] );
+    }
+
+    // Write out the offsets
+    std::cout << "Offset file path: " << m_OffsetFilePath << std::endl;
+    if ( !m_OffsetFilePath.empty() )
+    {
+      WriteOffsetFile();
+    }
+  }
 
   os.close();
 }

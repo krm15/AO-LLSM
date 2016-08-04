@@ -153,6 +153,17 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
     return  m_StitchSize;
   }
 
+  void SetStepLength( DoubleVectorType& stepLength )
+  {
+    m_StepLength = stepLength;
+  }
+
+  void SetSearchRadius( DoubleVectorType& searchRadius )
+  {
+    m_SearchRadius = searchRadius;
+  }
+
+
   itkGetObjectMacro( StitchedImage, ImageType );
   itkGetObjectMacro( SharedData, SharedDataType );
 
@@ -178,8 +189,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkSetMacro( TimePoint,           unsigned int );
   itkSetMacro( ZTileStart,          unsigned int );
   itkSetMacro( ZTileEnd,            unsigned int );
-  itkSetMacro( StepLength,          double );
-  itkSetMacro( SearchRadius,        double );
   itkSetObjectMacro( SharedData, SharedDataType );
 
   protected:
@@ -194,7 +203,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
   void ReadOffsetFile();
   void WriteOffsetFile();
-  void RegisterTiles();
+  void RegisterTiles( float searchRadius, float stepLength );
 
   std::string   m_Path;
   std::string   m_SettingsDirectory;
@@ -238,8 +247,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   unsigned int      m_ZTileEnd;
   bool              m_RegisterZTiles;
   SharedDataPointer m_SharedData;
-  double            m_SearchRadius;
-  double            m_StepLength;
+  DoubleVectorType  m_SearchRadius;
+  DoubleVectorType  m_StepLength;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

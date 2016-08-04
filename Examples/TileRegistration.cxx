@@ -105,8 +105,8 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
   opt->addUsage( " -s   --zstart  0   (default) z tile" );
   opt->addUsage( " -e   --zend    1   (default) z tile" );
-  opt->addUsage( " -l   --length  5.0 (default) search length" );
-  opt->addUsage( " -d   --delta   0.5 (default) delta step length" );
+  opt->addUsage( " -l   --length  5.0 (default) search length vector" );
+  opt->addUsage( " -d   --delta   0.5 (default) delta step length vector" );
   opt->addUsage( "" );
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -151,9 +151,9 @@ int main ( int argc, char* argv[] )
   std::string OffsetFilePath = "";
   std::string searchCH = "_ch";
   unsigned int numOfThreads = 1;
-  double stepLength = 0.5;
-  double searchRadius = 5.0;
-  
+  std::vector<double> searchRadius;
+  std::vector<double> stepLength;
+
   if( opt->getArgc() < 2 )
   {
     std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
@@ -195,11 +195,33 @@ int main ( int argc, char* argv[] )
   }
   if( opt->getValue( 'd' ) != NULL  || opt->getValue( "delta" ) != NULL  )
   {
-    stepLength = atof( opt->getValue( 'd' ) );
+    std::string input = opt->getValue( 'd' );
+    std::istringstream ss( input );
+    std::string token;
+
+    while( std::getline(ss, token, ',') )
+    {
+      stepLength.push_back( atof(token.c_str()) );
+    }
   }
-    if( opt->getValue( 'l' ) != NULL  || opt->getValue( "length" ) != NULL  )
+  else
   {
-    searchRadius = atof( opt->getValue( 'l' ) );
+    stepLength.push_back( 0.5 );
+  }
+  if( opt->getValue( 'l' ) != NULL  || opt->getValue( "length" ) != NULL  )
+  {
+    std::string input = opt->getValue( 'l' );
+    std::istringstream ss( input );
+    std::string token;
+
+    while( std::getline(ss, token, ',') )
+    {
+      searchRadius.push_back( atof(token.c_str()) );
+    }
+  }
+  else
+  {
+    searchRadius.push_back( 5.0 );
   }
   
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
