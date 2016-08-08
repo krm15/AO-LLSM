@@ -117,8 +117,8 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -m   --mip     Off MIP of stitched tiles " );
   opt->addUsage( " -c   --channel 0   (default) channel value" );
   opt->addUsage( " -t   --time    0   (default) timepoint" );
-  opt->addUsage( " -s   --zstart  0   (default) z start plane" );
-  opt->addUsage( " -e   --zend    100 (default) z end plane" );
+  opt->addUsage( " -s   --start   0,0,0 (default) start coordinates" );
+  opt->addUsage( " -e   --end    100,100,100 (default) end coordinates" );
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -l   --lsMap       (default) correction filename" );
   opt->addUsage( " -i   --darkLevel 30 (default) dark level intensity" );
@@ -142,8 +142,8 @@ int main ( int argc, char* argv[] )
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
   opt->setOption(  "time",    't' );
-  opt->setOption(  "zstart",  's' );
-  opt->setOption(  "zend",    'e' );
+  opt->setOption(  "start",  's' );
+  opt->setOption(  "end",    'e' );
   opt->setOption(  "lsMap",   'l' );
   opt->setOption(  "thresh",  'i' );
   opt->setOption(  "var",     'v' );
@@ -170,6 +170,8 @@ int main ( int argc, char* argv[] )
   unsigned int ch = 0;
   unsigned int tp = 0;
   unsigned int zStart = 0;
+  std::vector<unsigned int> start;
+  std::vector<unsigned int> end;
   unsigned int zEnd = 10;
   std::string lsMap = "~/";
   std::string PSFImagePath = "~/";
@@ -209,13 +211,45 @@ int main ( int argc, char* argv[] )
   {
     tp = atoi( opt->getValue( 't' ) );
   }
-  if( opt->getValue( 's' ) != NULL  || opt->getValue( "zstart" ) != NULL  )
+  if( opt->getValue( 's' ) != NULL  || opt->getValue( "start" ) != NULL  )
   {
     zStart = atoi( opt->getValue( 's' ) );
+
+    std::string input = opt->getValue( 's' );
+    std::istringstream ss( input );
+    std::string token;
+
+    while( std::getline(ss, token, ',') )
+    {
+      start.push_back( atoi(token.c_str()) );
+    }
   }
-  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "zend" ) != NULL  )
+  else
+  {
+    start.push_back( 0 );
+    start.push_back( 0 );
+    start.push_back( 0 );
+  }
+
+
+  if( opt->getValue( 'e' ) != NULL  || opt->getValue( "end" ) != NULL  )
   {
     zEnd = atoi( opt->getValue( 'e' ) );
+
+    std::string input = opt->getValue( 'e' );
+    std::istringstream ss( input );
+    std::string token;
+
+    while( std::getline(ss, token, ',') )
+    {
+      end.push_back( atoi(token.c_str()) );
+    }
+  }
+  else
+  {
+    end.push_back( 0 );
+    end.push_back( 0 );
+    end.push_back( 0 );
   }
   if( opt->getValue( 'i' ) != NULL  || opt->getValue( "intensity" ) != NULL  )
   {
@@ -339,31 +373,32 @@ int main ( int argc, char* argv[] )
   std::cout << settingsReader->GetStitchSize()[1] << ' ';
   std::cout << settingsReader->GetStitchSize()[2] << std::endl;
 
-  if ( zEnd > settingsReader->GetStitchDimension()[2] )
-  {
-    zEnd = settingsReader->GetStitchDimension()[2] - 1;
-  }
-
-  if ( zStart > zEnd )
-  {
-    std::cout << "zStart is greater than zEnd" << std::endl;
-    return EXIT_SUCCESS;
-  }
-
   IndexType  roiIndex;
   roiIndex.Fill( 0 );
 
-  SizeType roiSize = settingsReader->GetStitchDimension();
+  IndexType tempIndex;
 
-  roiSize[2] = zEnd - zStart + 1;
+  SizeType roiSize = settingsReader->GetStitchDimension();
+  for( unsigned int i = 0; i < Dimension; i++ )
+  {
+    if ( end[i] > settingsReader->GetStitchDimension()[i] )
+    {
+      end[i] = settingsReader->GetStitchDimension()[i] - 1;
+    }
+
+    if ( start[i] > end[i] )
+    {
+      std::cout << "zStart is greater than zEnd" << std::endl;
+      return EXIT_SUCCESS;
+    }
+    roiSize[i] = end[i] - start[i] + 1;
+
+    tempIndex[i] = start[i];
+  }
 
   RegionType roi;
   roi.SetIndex( roiIndex );
   roi.SetSize( roiSize );
-
-  IndexType tempIndex;
-  tempIndex.Fill( 0 );
-  tempIndex[2] = zStart;
 
   PointType  roiOrigin;
   ImageType::Pointer m_StitchedImage = settingsReader->GetStitchedImage();
@@ -394,10 +429,12 @@ int main ( int argc, char* argv[] )
   fillROI->Update();
 
   ImageType::SpacingType nspacing;
-  ImageType::SizeType nsize = roiSize;
-  ImageType::PointType nOrigin = roiOrigin;
+  ImageType::SizeType nsize;
+  ImageType::PointType nOrigin;
   ImageType::Pointer outputImage = fillROI->GetOutput();
   outputImage->DisconnectPipeline();
+
+  IndexType t_start, t_end;
 
   for( unsigned int i = 0; i < sxy.size(); i += 2 )
   {
@@ -407,13 +444,13 @@ int main ( int argc, char* argv[] )
     nspacing[1] = spacing[1]*sXY;
     nspacing[2] = spacing[2]*sZ;
 
-    unsigned int t_zStart = vcl_ceil( (zStart * spacing[2])/nspacing[2] );
-    unsigned int t_zEnd = vcl_floor( (zEnd * spacing[2])/nspacing[2] );
-    nOrigin[2] = sOrigin[2] + t_zStart * nspacing[2];
-
-    nsize[0] /= sXY;
-    nsize[1] /= sXY;
-    nsize[2] = t_zEnd - t_zStart + 1;
+    for( unsigned int j = 0; j < Dimension; j++ )
+    {
+      t_start[j] = vcl_ceil( (start[j] * spacing[j])/nspacing[j] );
+      t_end[j] = vcl_floor( (end[j] * spacing[j])/nspacing[j] );
+      nOrigin[j] = sOrigin[j] + t_start[j] * nspacing[j];
+      nsize[j] = t_end[j] - t_start[j] + 1;
+    }
 
     // create the resample filter, transform and interpolator
     TransformType::Pointer transform = TransformType::New();
@@ -445,8 +482,12 @@ int main ( int argc, char* argv[] )
       oFilename << "_" << sXY << "_" << sZ << "s";
       oFilename << "_" << ch << "ch" ;
       oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
-      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_zStart;
-      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_zEnd;
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_start[0];
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_end[0] << "x";
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_start[1];
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_end[1] << "y";
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_start[2];
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_end[2];
       oFilename << "z.tif";
 
       RWriterType::Pointer writer = RWriterType::New();
@@ -461,6 +502,10 @@ int main ( int argc, char* argv[] )
       oFilename << "_" << sXY << "_" << sZ << "s";
       oFilename << "_" << ch << "ch" ;
       oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << tp << "t";
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_start[0];
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_end[0] << "x";
+      oFilename << "_" << std::setfill( '0' ) << std::setw( 4 ) << t_start[1];
+      oFilename << "-" << std::setfill( '0' ) << std::setw( 4 ) << t_end[1] << "y";
       oFilename << "_%03dz.tif";
 
       std::cout << oFilename.str().c_str() << std::endl;
@@ -468,8 +513,8 @@ int main ( int argc, char* argv[] )
       // Set filename format
       NameGeneratorType::Pointer nameGeneratorOutput = NameGeneratorType::New();
       nameGeneratorOutput->SetSeriesFormat( oFilename.str().c_str() );
-      nameGeneratorOutput->SetStartIndex( t_zStart );
-      nameGeneratorOutput->SetEndIndex( t_zEnd );
+      nameGeneratorOutput->SetStartIndex( t_start[2] );
+      nameGeneratorOutput->SetEndIndex( t_end[2] );
       nameGeneratorOutput->SetIncrementIndex( 1 );
 
       // Write out using Series writer
