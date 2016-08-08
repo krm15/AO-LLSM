@@ -609,6 +609,14 @@ UpdateFileNameLookup( std::istream& os )
             filename2 << m_TileDirectory << filename;
             m_SharedData->m_TileFileNameArray[i][j][k] = filename2.str();
 
+            // Read the associated tags of this filename
+            //TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[i][j][k].c_str(), "r");
+            //double* cen = new double[3];
+            //unsigned int count = 3;
+            //TIFFGetField(image, 40000, &count, &cen);
+
+            //std::cout << cen[0] << ' ' << cen[1] << ' ' << cen[2] << std::endl;
+
             if ( !ChannelNameSet )
             {
               unsigned int pos = filename.find( searchString );

@@ -67,6 +67,8 @@
 #include "itkMetaDataDictionary.h"
 #include "itkMetaDataObject.h"
 
+#include "itk_tiff.h"
+
 #include "itkImageFileWriter.h"
 
 

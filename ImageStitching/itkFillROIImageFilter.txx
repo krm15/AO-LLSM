@@ -255,9 +255,12 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
           if  ( ! filename.empty() )
           {
             //std::cout << i << ' ' << j << ' ' << k << std::endl;
-            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] + m_SharedData->m_TileEffectiveOffset[0][k];
-            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] + m_SharedData->m_TileEffectiveOffset[1][k];
-            currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] + m_SharedData->m_TileEffectiveOffset[2][k];
+            currentTileOrigin[0] = m_SharedData->m_TileCover[0][0][0][i] +
+                m_SharedData->m_TileEffectiveOffset[0][k];
+            currentTileOrigin[1] = m_SharedData->m_TileCover[1][0][0][j] +
+                m_SharedData->m_TileEffectiveOffset[1][k];
+            currentTileOrigin[2] = m_SharedData->m_TileCover[2][0][0][k] +
+                m_SharedData->m_TileEffectiveOffset[2][k];
 
             //std::cout << "Current Tile Origin " << currentTileOrigin << std::endl;
 
