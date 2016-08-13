@@ -348,11 +348,13 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
   m_Reader->SetFileName( filename.c_str() );
   m_Reader->Update();
 
-  CastFilterPointer caster = CastFilterType::New();
-  caster->SetInput( m_Reader->GetOutput() );
-  caster->Update();
+  ShiftScaleFilterPointer shiftFilter = ShiftScaleFilterType::New();
+  shiftFilter->SetInput( m_Reader->GetOutput() );
+  shiftFilter->SetScale( m_SharedData->m_ScalingFactor );
+  shiftFilter->SetShift( 0.0 );
+  shiftFilter->Update();
 
-  ImagePointer cImage = caster->GetOutput();
+  ImagePointer cImage = shiftFilter->GetOutput();
   cImage->DisconnectPipeline();
 
   PixelType p;

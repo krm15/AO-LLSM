@@ -40,7 +40,7 @@
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include "itkCastImageFilter.h"
+#include "itkShiftScaleImageFilter.h"
 #include "itkPermuteAxesImageFilter.h"
 #include "itkRichardsonLucyDeconvolutionImageFilter.h"
 #include "itkStitchingSharedData.h"
@@ -86,8 +86,8 @@ public:
   typedef ImageFileReader< DoubleImageType >    ReaderType;
   typedef typename ReaderType::Pointer          ReaderPointer;
 
-  typedef CastImageFilter< DoubleImageType, ImageType > CastFilterType;
-  typedef typename CastFilterType::Pointer CastFilterPointer;
+  typedef ShiftScaleImageFilter< DoubleImageType, ImageType > ShiftScaleFilterType;
+  typedef typename ShiftScaleFilterType::Pointer ShiftScaleFilterPointer;
 
   typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
   typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
@@ -97,7 +97,7 @@ public:
 
   typedef RegionOfInterestImageFilter< ImageType, ImageType > ROIFilter3DType;
   typedef typename ROIFilter3DType::Pointer ROIFilter3DPointer;
-  
+
   typedef ImageFileWriter< ImageType > WriterType;
   typedef typename WriterType::Pointer WriterPointer;
 

@@ -419,7 +419,7 @@ UpdateFileNameLookup( std::istream& os )
       unsigned int lastindex = filename.find_last_of(".");
       std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "_MIP_z.tif";
 
-      std::ifstream infile( filename_mip );
+      std::ifstream infile( filename_mip.c_str() );
       if ( infile.good() )
       {
         infile.close();
@@ -438,13 +438,13 @@ UpdateFileNameLookup( std::istream& os )
         }
       }
 
-//      // Read the associated tags of this filename
-//      TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
-//      void *cenx, *ceny, *cenz;
-//      uint16 count;
-//      TIFFGetField(image, 40000, &count, &cenx);
-//      TIFFGetField(image, 40001, &count, &ceny);
-//      TIFFGetField(image, 40002, &count, &cenz);
+      // Read the associated tags of this filename
+      TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
+      void *cenx, *ceny, *cenz;
+      uint16 count;
+      TIFFGetField(image, 40000, &count, &cenx);
+      TIFFGetField(image, 40001, &count, &ceny);
+      TIFFGetField(image, 40002, &count, &cenz);
 //      std::cout << m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str()
 //                << ' ' << *(float *)cenx << ' ' << *(float *)ceny << ' '
 //                << *(float *)cenz << std::endl;
@@ -464,7 +464,7 @@ UpdateFileNameLookup( std::istream& os )
 
   if ( max > 0.01 )
   {
-    m_SharedData->m_ScalingFactor = 65536/max;
+    m_SharedData->m_ScalingFactor = 65535/max;
   }
   else
   {
