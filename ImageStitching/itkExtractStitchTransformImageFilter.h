@@ -52,8 +52,6 @@
 #include <vector>
 
 #include <cstring>
-#include <strstream>
-
 #include <iostream>
 #include <istream>
 #include <streambuf>
