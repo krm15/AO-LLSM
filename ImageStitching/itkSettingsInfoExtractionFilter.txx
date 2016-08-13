@@ -399,6 +399,7 @@ UpdateFileNameLookup( std::istream& os )
 
   unsigned int xp, yp, zp, pos;
   unsigned int m_TrueCountOfTiles = 0;
+  double max = 0.0;
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
@@ -415,12 +416,38 @@ UpdateFileNameLookup( std::istream& os )
 
       m_SharedData->m_TileFileNameArray[xp][yp][zp] = m_TileDirectory + filename;
 
-      // Read the associated tags of this filename
-      //TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
-      //double cen;
-      //unsigned int count = 1;
-      //TIFFGetField(image, 40000, &count, &cen);
-      //std::cout << cen << std::endl;
+      unsigned int lastindex = filename.find_last_of(".");
+      std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "_MIP_z.tif";
+
+      std::ifstream infile( filename_mip );
+      if ( infile.good() )
+      {
+        infile.close();
+        RReaderPointer reader = RReaderType::New();
+        reader->SetFileName ( filename_mip.c_str() );
+        reader->Update();
+
+        RImagePointer img = reader->GetOutput();
+
+        RIteratorType It( img, img->GetLargestPossibleRegion() );
+        It.GoToBegin();
+        while( !It.IsAtEnd() )
+        {
+          if ( max < It.Get() ) max = It.Get();
+          ++It;
+        }
+      }
+
+//      // Read the associated tags of this filename
+//      TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
+//      void *cenx, *ceny, *cenz;
+//      uint16 count;
+//      TIFFGetField(image, 40000, &count, &cenx);
+//      TIFFGetField(image, 40001, &count, &ceny);
+//      TIFFGetField(image, 40002, &count, &cenz);
+//      std::cout << m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str()
+//                << ' ' << *(float *)cenx << ' ' << *(float *)ceny << ' '
+//                << *(float *)cenz << std::endl;
 
       if ( !ChannelNameSet )
       {
@@ -434,7 +461,17 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
   m_NumberOfTiles = m_TrueCountOfTiles;
+
+  if ( max > 0.01 )
+  {
+    m_SharedData->m_ScalingFactor = 65536/max;
+  }
+  else
+  {
+    m_SharedData->m_ScalingFactor = 1.0;
+  }
 }
+
 
 template < class TValueType, class TInputImage >
 std::istream&

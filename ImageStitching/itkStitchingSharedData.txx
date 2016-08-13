@@ -52,6 +52,7 @@ StitchingSharedData< TInputImage >
   m_PSF = ITK_NULLPTR;
   m_PSFPath = "";
   m_DeconvolutionIterations = 15;
+  m_ScalingFactor = 1.0;
 }
 
 

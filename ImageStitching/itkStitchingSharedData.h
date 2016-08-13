@@ -44,6 +44,7 @@ class StitchingSharedData : public Object
 
   typedef ImageFileReader< ImageType > ReaderType;
   typedef typename ReaderType::Pointer ReaderPointer;
+  typedef ImageRegionIterator< ImageType > IteratorType;
 
   typedef Image< double, 2 > RImageType;
   typedef typename RImageType::Pointer RImagePointer;
@@ -97,6 +98,8 @@ class StitchingSharedData : public Object
   double        m_CorrectionThreshold;
   std::string   m_CorrectionFilename;
   double        m_CorrectionVariance;
+
+  double        m_ScalingFactor;
 
   IndexType         m_TileNumber;
   PointType         m_TileSize;

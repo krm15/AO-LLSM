@@ -108,9 +108,13 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef typename ImageType::Pointer ImagePointer;
   typedef ImageFileReader< ImageType > ReaderType;
   typedef typename ReaderType::Pointer ReaderPointer;
-  typedef itk::ImageRegionIterator< ImageType > IteratorType;
-  typedef ImageFileWriter< ImageType > WriterType;
-  typedef typename WriterType::Pointer WriterPointer;
+
+  typedef Image<double, 2> RImageType;
+  typedef typename RImageType::Pointer RImagePointer;
+
+  typedef ImageFileReader< RImageType > RReaderType;
+  typedef typename RReaderType::Pointer RReaderPointer;
+  typedef ImageRegionIterator< RImageType > RIteratorType;
 
   typedef StitchingSharedData< ImageType > SharedDataType;
   typedef typename SharedDataType::Pointer SharedDataPointer;
