@@ -310,10 +310,6 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
               currentImage = roiFilter->GetOutput();
               currentImage->DisconnectPipeline();
             }
-            else
-            {
-              //std::cout << m_SingleZFill << ' ' << m_ZTile << std::endl;
-            }
             currentTileRegion = currentImage->GetLargestPossibleRegion();
 
             OverlapRegion( currentImage , m_ROIImage,
@@ -329,10 +325,9 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
               IteratorType tIt( currentImage, currentTileOverlapRegion );
               tIt.GoToBegin();
 
-              PixelType p;
               while( !tIt.IsAtEnd() )
               {
-                //rIt.Set( tIt.Get() );//rIt.Get() +
+                rIt.Set( tIt.Get() );//rIt.Get() +
                 ++tIt;
                 ++rIt;
               }
