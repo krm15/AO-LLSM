@@ -4,14 +4,14 @@ INCLUDE_DIRECTORIES( BEFORE
   ${AO-LLSM_SOURCE_DIR}/Options
 )
 
-ADD_EXECUTABLE(roiExtract ROIExtract.cxx )
+ADD_EXECUTABLE( roiExtract ROIExtract.cxx )
 TARGET_LINK_LIBRARIES(roiExtract ${ITK_LIBRARIES} )
 
-ADD_EXECUTABLE(deconvolve RichardsonLucyDeconvolution.cxx)
+ADD_EXECUTABLE( deconvolve RichardsonLucyDeconvolution.cxx )
 TARGET_LINK_LIBRARIES(deconvolve ${ITK_LIBRARIES})
 
-ADD_EXECUTABLE( tileReader TileReader.cxx)
-TARGET_LINK_LIBRARIES( tileReader ${ITK_LIBRARIES} Option )
+ADD_EXECUTABLE( stitchTiles StitchTiles.cxx)
+TARGET_LINK_LIBRARIES( stitchTiles ${ITK_LIBRARIES} Option )
 
 ADD_EXECUTABLE( tileIDSelection TileIDSelection.cxx )
 TARGET_LINK_LIBRARIES( tileIDSelection ${ITK_LIBRARIES} Option )

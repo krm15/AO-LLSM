@@ -251,7 +251,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-          std::cout << filename.c_str() << std::endl;
+          //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
             //std::cout << i << ' ' << j << ' ' << k << std::endl;
@@ -332,7 +332,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
               PixelType p;
               while( !tIt.IsAtEnd() )
               {
-                rIt.Set( tIt.Get() );//rIt.Get() +
+                //rIt.Set( tIt.Get() );//rIt.Get() +
                 ++tIt;
                 ++rIt;
               }
@@ -350,10 +350,7 @@ typename FillROIImageFilter< TInputImage >::ImagePointer
 FillROIImageFilter< TInputImage >::
 ExtractCorrectedAndFlippedTile( std::string& filename )
 {
-  ImagePointer m_ROIImage = this->GetOutput();
-  PointType m_ROIOrigin = m_ROIImage->GetOrigin();
-  SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
-  RegionType m_ROI = m_ROIImage->GetLargestPossibleRegion();
+  SpacingType  m_TileSpacing = m_SharedData->m_TileSpacing;
 
   ReaderPointer m_Reader = ReaderType::New();
   m_Reader->SetFileName( filename.c_str() );
@@ -404,6 +401,7 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
   PermuteAxesFilterPointer pAFilter = PermuteAxesFilterType::New();
   pAFilter->SetInput( cImage );
   pAFilter->SetOrder( axesOrder );
+  pAFilter->SetNumberOfThreads( 1 );
   pAFilter->Update();
   ImagePointer pImage = pAFilter->GetOutput();
 

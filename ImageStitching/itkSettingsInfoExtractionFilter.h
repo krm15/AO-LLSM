@@ -49,12 +49,18 @@
 #define ITK_LEAN_AND_MEAN
 #endif
 
-#include <iostream>
 #include <vector>
+
 #include <cstring>
+#include <strstream>
+
+#include <iostream>
+#include <istream>
+#include <streambuf>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+
 #include <vnl_vector.h>
 #include <vnl_matrix.h>
 #include "itkDirectory.h"
@@ -62,7 +68,6 @@
 #include "itkImageRegionIterator.h"
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkStitchingSharedData.h"
-#include "itkFillROIImageFilter.h"
 #include "itkHistogramMatchingImageFilter.h"
 #include "itkMetaDataDictionary.h"
 #include "itkMetaDataObject.h"
@@ -124,9 +129,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   typedef RegionOfInterestImageFilter< ImageType, ImageType > ROIFilter3DType;
   typedef typename ROIFilter3DType::Pointer ROIFilter3DPointer;
 
-  typedef FillROIImageFilter< ImageType > FillROIFilterType;
-  typedef typename FillROIFilterType::Pointer FillROIFilterPointer;
-
   typedef MetaDataDictionary DictionaryType;
   typedef MetaDataObject< std::string > MetaDataStringType;
 
@@ -135,80 +137,40 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void CreateStitchedImage();
   void AllocateROI();
 
-  unsigned int * GetTileNumber()
-  {
-    return m_TileNumber;
-  }
-
-  ValueType * GetTileSize()
-  {
-    return  m_TileSize;
-  }
-
-  ValueType * GetTileOverlap()
-  {
-    return  m_TileOverlap;
-  }
-
-  ValueType * GetStitchSize()
-  {
-    return  m_StitchSize;
-  }
-
-  void SetStepLength( DoubleVectorType& stepLength )
-  {
-    m_StepLength = stepLength;
-  }
-
-  void SetSearchRadius( DoubleVectorType& searchRadius )
-  {
-    m_SearchRadius = searchRadius;
-  }
-
-
   itkGetObjectMacro( StitchedImage, ImageType );
   itkGetObjectMacro( SharedData, SharedDataType );
 
   itkGetConstMacro( SettingFieldName,   StringVectorType );
-  itkGetConstMacro( SettingFieldValue,  DoubleVectorType );
+  itkGetConstMacro( SettingFieldValue,  StringVectorType );
   itkGetConstMacro( NumberOfTiles,      unsigned int );
   itkGetConstMacro( MinimumStart,       PointType );
   itkGetConstMacro( MaximumEnd,         PointType );
-  itkGetConstMacro( TileDimension,      SizeType );
-  itkGetConstMacro( TileSpacing,        SpacingType );
   itkGetConstMacro( StitchOrigin,       PointType );
   itkGetConstMacro( StitchDimension,    SizeType );
   itkGetConstMacro( StitchIndex,        IndexType );
+  itkGetConstMacro( StitchSize,         PointType );
   itkGetConstMacro( StitchRegion,       RegionType );
   itkGetConstMacro( ChannelName,        std::string );
+  itkGetConstMacro( ScopeName,          std::string );
 
-  itkSetMacro( RegisterZTiles,      bool );
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
   itkSetMacro( OffsetFilePath,      std::string );
   itkSetMacro( ChannelPrefix,       std::string );
   itkSetMacro( ChannelNumber,       unsigned int );
   itkSetMacro( TimePoint,           unsigned int );
-  itkSetMacro( ZTileStart,          unsigned int );
-  itkSetMacro( ZTileEnd,            unsigned int );
   itkSetObjectMacro( SharedData, SharedDataType );
 
   protected:
   SettingsInfoExtractionFilter();
   ~SettingsInfoExtractionFilter(){}
-  void OverlapRegion( ImagePointer A, ImagePointer B,
-                      RegionType& rA, RegionType& rB );
   void UpdateTileCoverage( std::istream& os );
   void TransformCoordinateAxes();
   void ReadTileInfo( std::istream& os );
-  void FillROI();
-  ImagePointer ExtractCorrectedAndFlippedTile( std::string& filename );
   void ReadOffsetFile();
-  void WriteOffsetFile();
-  void RegisterTiles( float searchRadius, float stepLength );
+  std::istream& safeGetline(std::istream& is, std::string& t);
 
   std::string   m_Path;
-  std::string   m_SettingsDirectory;
   std::string   m_TileDirectory;
   std::string   m_OffsetFilePath;
   std::string   m_ChannelName;
@@ -218,39 +180,28 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   std::string   m_ChannelPrefix;
 
   unsigned int      m_Dimension;
+  std::string       m_SettingsDirectory;
   StringVectorType  m_SettingFieldName;
-  DoubleVectorType  m_SettingFieldValue;
+  StringVectorType  m_SettingFieldValue;
+  bool              m_SampleScan;
+  std::string       m_ScopeName;
 
   unsigned int      m_NumberOfTiles;
-  unsigned int      m_TileNumber[3];
-  ValueType         m_TileSize[3];
-  SizeType          m_TileDimension;
-  SpacingType       m_TileSpacing;
-  ValueType         m_TileOverlap[3];
 
   PointType m_MinimumStart;
   PointType m_MaximumEnd;
-
-  unsigned int      m_ScanStart[3];
-  unsigned int      m_ScanEnd[3];
-
 
   vnlMatrixType m_TileInfoValue;
   vnlMatrixType m_TransformedTileInfoValue;
 
   ImagePointer  m_StitchedImage;
-  double        m_StitchSize[3];
+  PointType     m_StitchSize;
   PointType     m_StitchOrigin;
   SizeType      m_StitchDimension;
   IndexType     m_StitchIndex;
   RegionType    m_StitchRegion;
 
-  unsigned int      m_ZTileStart;
-  unsigned int      m_ZTileEnd;
-  bool              m_RegisterZTiles;
   SharedDataPointer m_SharedData;
-  DoubleVectorType  m_SearchRadius;
-  DoubleVectorType  m_StepLength;
 
   private:
     SettingsInfoExtractionFilter ( Self& );   // intentionally not implemented

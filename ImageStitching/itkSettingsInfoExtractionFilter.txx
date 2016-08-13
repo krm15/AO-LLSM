@@ -45,69 +45,68 @@ template < class TValueType, class TInputImage >
 SettingsInfoExtractionFilter< TValueType, TInputImage >
 ::SettingsInfoExtractionFilter()
 {
-  m_SettingFieldName.resize( 100 );
-  m_SettingFieldValue.resize( 100 );
+  m_SettingFieldName.resize( 100, "" );
+  m_SettingFieldValue.resize( 100, "" );
 
   m_NumberOfTiles = 1;
   m_StitchedImage = ITK_NULLPTR;
-  m_OffsetFilePath = "";
   m_ChannelPrefix = "_ch";
-  m_RegisterZTiles = false;
+  m_OffsetFilePath = "";
   m_SharedData = ITK_NULLPTR;
-  m_ZTileStart = 0;
-  m_ZTileEnd = 0;
-  //m_StepLength = 0.5;
-  //m_SearchRadius = 5.0;
+  m_SampleScan = false;
 }
 
 
 template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-OverlapRegion( ImagePointer A, ImagePointer B, RegionType& rA, RegionType& rB )
+ReadOffsetFile()
 {
-  SizeType sizeA, sizeB, s;
-  sizeA = A->GetLargestPossibleRegion().GetSize();
-  sizeB = B->GetLargestPossibleRegion().GetSize();
-
-  PointType originA = A->GetOrigin();
-  PointType originB = B->GetOrigin();
-
-  IndexType sIndexA, sIndexB;
-  IndexType tIndexA, tIndexB;
-
-  A->TransformPhysicalPointToIndex( originB, tIndexA );
-  B->TransformPhysicalPointToIndex( originA, tIndexB );
-
-  for( unsigned int i = 0; i < ImageDimension; i++ )
+  for( unsigned int id = 1; id < m_SharedData->m_TileNumber[2]; id++  )
   {
-    if ( originA[i] > originB[i] )
+    std::stringstream m_OffsetFile;
+    m_OffsetFile << m_OffsetFilePath << id << ".txt";
+    std::ifstream os ( m_OffsetFile.str().c_str() );
+
+    if ( !os )
     {
-      sIndexA[i] = 0;
-      sIndexB[i] = tIndexB[i];
-      s[i] = sizeA[i];
-      if ( s[i] > static_cast< SizeValueType >( sizeB[i] - sIndexB[i] - 1 ) )
+      return;
+    }
+
+    std::string line, value;
+    for( unsigned int i = 0; i < ImageDimension; i++ )
+    {
+      std::getline ( os, line );
+      std::stringstream valueStream( line );
+      for( unsigned int j = 0; j < m_SharedData->m_TileNumber[2]; j++ )
       {
-        s[i] = sizeB[i] - sIndexB[i];
+        std::getline ( valueStream, value, ' ' );
+        m_SharedData->m_TileOffset[i][j] += atof( value.c_str() );
       }
     }
-    else
+    os.close();
+  }
+
+  // Compile offsets to identify effective offsets
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    m_SharedData->m_TileEffectiveOffset[i][0] = 0.0;
+    for( unsigned int j = 1; j < m_SharedData->m_TileNumber[2]; j++ )
     {
-      sIndexB[i] = 0;
-      sIndexA[i] = tIndexA[i];
-      s[i] = sizeB[i];
-      if ( s[i] > static_cast< SizeValueType >(
-        sizeA[i] - sIndexA[i] - 1 ) )
-      {
-        s[i] = sizeA[i] - sIndexA[i];
-      }
+      m_SharedData->m_TileEffectiveOffset[i][j] =
+          m_SharedData->m_TileEffectiveOffset[i][j-1] +
+          m_SharedData->m_TileOffset[i][j];
     }
   }
 
-  rA.SetIndex( sIndexA );
-  rA.SetSize( s );
-  rB.SetIndex( sIndexB );
-  rB.SetSize( s );
+  // Flip effective offsets
+  double temp;
+  for( unsigned int j = 1; j < m_SharedData->m_TileNumber[2]; j++ )
+  {
+    temp = m_SharedData->m_TileEffectiveOffset[0][j];
+    m_SharedData->m_TileEffectiveOffset[0][j] = m_SharedData->m_TileEffectiveOffset[1][j];
+    m_SharedData->m_TileEffectiveOffset[1][j] = temp;
+  }
 }
 
 
@@ -122,7 +121,7 @@ UpdateTileCoverage( std::istream& os )
     {
       for( unsigned int k = 0; k < 2; k++ )
       {
-        m_SharedData->m_TileCover[i][j][k].resize( m_TileNumber[i] );
+        m_SharedData->m_TileCover[i][j][k].resize( m_SharedData->m_TileNumber[i] );
       }
     }
   }
@@ -146,16 +145,16 @@ UpdateTileCoverage( std::istream& os )
       sign = false;
     }
 
-    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
+    for( unsigned int k = 0; k < m_SharedData->m_TileNumber[j]; k++ )
     {
-       m_SharedData->m_TileCover[j][0][0][k] = ( k * ( m_TileSize[j] -  m_TileOverlap[j]) );
+       m_SharedData->m_TileCover[j][0][0][k] = ( k * ( m_SharedData->m_TileSize[j] -  m_SharedData->m_TileOverlap[j]) );
 
        if (!sign)
        {
          m_SharedData->m_TileCover[j][0][0][k] = -m_SharedData->m_TileCover[j][0][0][k];
        }
 
-       m_SharedData->m_TileCover[j][1][0][k] = m_SharedData->m_TileCover[j][0][0][k] + m_TileSize[j];
+       m_SharedData->m_TileCover[j][1][0][k] = m_SharedData->m_TileCover[j][0][0][k] + m_SharedData->m_TileSize[j];
     }
   }
 
@@ -164,13 +163,13 @@ UpdateTileCoverage( std::istream& os )
   {
     m_MinimumStart[j] = 1000000.0;
     m_MaximumEnd[j]   = -m_MinimumStart[j];
-    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
+    for( unsigned int k = 0; k < m_SharedData->m_TileNumber[j]; k++ )
     {
       // Clipping should be based on offsets as well
       m_SharedData->m_TileCover[j][0][1][k] = m_SharedData->m_TileCover[j][0][0][k]
-          + 0.5*m_TileOverlap[j];
+          + 0.5*m_SharedData->m_TileOverlap[j];
       m_SharedData->m_TileCover[j][1][1][k] = m_SharedData->m_TileCover[j][1][0][k]
-          - 0.5*m_TileOverlap[j];
+          - 0.5*m_SharedData->m_TileOverlap[j];
 
       if ( m_MinimumStart[j] > m_SharedData->m_TileCover[j][0][0][k] )
       {
@@ -188,9 +187,9 @@ UpdateTileCoverage( std::istream& os )
   // Extend the coverage of the first and last tile by overlap
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
-    unsigned int firstTile(0), lastTile(m_TileNumber[j]-1);
+    unsigned int firstTile(0), lastTile(m_SharedData->m_TileNumber[j]-1);
 
-    for( unsigned int k = 0; k < m_TileNumber[j]; k++ )
+    for( unsigned int k = 0; k < m_SharedData->m_TileNumber[j]; k++ )
     {
       if ( m_SharedData->m_TileCover[j][0][1][firstTile] > m_SharedData->m_TileCover[j][0][1][k] )
       {
@@ -210,261 +209,75 @@ UpdateTileCoverage( std::istream& os )
 template < class TValueType, class TInputImage >
 void
 SettingsInfoExtractionFilter< TValueType, TInputImage >::
-RegisterTiles( float searchRadius, float stepLength )
-{
-  bool tileForRegistration = false;
-  unsigned int i_,j_;
-
-  if ( m_ZTileEnd > m_TileNumber[2]-2 )
-  {
-    m_ZTileEnd = m_TileNumber[2]-2;
-  }
-
-  for( unsigned int ztile = m_ZTileStart; ztile <= m_ZTileEnd; ztile++ )
-  {    
-    i_ = m_TileNumber[0]/2;
-    j_ = m_TileNumber[1]/2;
-    if ( ( !m_SharedData->m_TileFileNameArray[i_][j_][ztile].empty() ) &&
-    ( !m_SharedData->m_TileFileNameArray[i_][j_][ztile+1].empty() ) )
-    {
-      tileForRegistration = true;
-    }
-
-    for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
-    {
-      for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
-      {
-        if ( ( !m_SharedData->m_TileFileNameArray[i][j][ztile].empty() ) &&
-             ( !m_SharedData->m_TileFileNameArray[i][j][ztile+1].empty() ) &&
-             ( !tileForRegistration ) )
-        {
-          tileForRegistration = true;
-          i_ = i;
-          j_ = j;
-        }
-      }
-    }
-
-    ReaderPointer sreader = ReaderType::New();
-    sreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][ztile] );
-    sreader->Update();
-    ImagePointer staticImage = sreader->GetOutput();
-    staticImage->DisconnectPipeline();
-    
-    ReaderPointer mreader = ReaderType::New();
-    mreader->SetFileName( m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] );
-    mreader->Update();
-    ImagePointer movingImage = mreader->GetOutput();
-    movingImage->DisconnectPipeline();
-
-//    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile] << std::endl;
-//    std::cout << m_SharedData->m_TileFileNameArray[i_][j_][ztile+1] << std::endl;
-
-    PointType sorigin;
-    sorigin[0] = 0.0;
-    sorigin[1] = 0.0;
-    sorigin[2] = 0.0;
-
-    PointType morigin;
-    morigin[0] = m_SharedData->m_TileOffset[0][ztile+1];
-    morigin[1] = m_SharedData->m_TileOffset[1][ztile+1];
-    morigin[2] = m_TileSize[2] - m_TileOverlap[2]
-        + m_SharedData->m_TileOffset[2][ztile+1];
-
-    staticImage->SetOrigin( sorigin );
-    movingImage->SetOrigin( morigin );
-
-    staticImage->SetSpacing( m_TileSpacing );
-    movingImage->SetSpacing( m_TileSpacing );
-    
-  //   WriterPointer writer1 = WriterType::New();
-  //   writer1->SetInput( staticImage );
-  //   writer1->SetFileName( "/home/krm15/output/static.mha" );
-  //   writer1->Update();
-  // 
-  //   WriterPointer writer2 = WriterType::New();
-  //   writer2->SetInput( movingImage );
-  //   writer2->SetFileName( "/home/krm15/output/moving.mha" );
-  //   writer2->Update();  
-    
-    RegionType sROI, mROI;
-    PointType norigin;
-    
-    double val1(0.0), val2(0.0);
-    OverlapRegion( staticImage, movingImage, sROI, mROI );
-    IteratorType sIt( staticImage, sROI );
-    IteratorType mIt( movingImage, mROI );
-    sIt.GoToBegin();
-    mIt.GoToBegin();
-    while( !sIt.IsAtEnd() )
-    {
-      val1 += sIt.Get();
-      val2 += mIt.Get();
-      ++sIt;
-      ++mIt;
-    }
-    double scaleFactor = val1/val2;
-    
-    double bestValue = std::numeric_limits<double>::max();
-    double besti, bestj, bestk, value;
-    value = bestValue;
-
-    for( float i = -searchRadius; i <= searchRadius; i+=stepLength )
-    {
-      norigin[0] = morigin[0] + i;
-      for( float j = -searchRadius; j <= searchRadius; j+=stepLength )
-      {
-        norigin[1] = morigin[1] + j;
-        for( float k = -searchRadius; k <= searchRadius; k+=stepLength )
-        {
-          //std::cout << i<< ' ' << j << ' ' << k << ' ' << value << std::endl;
-          norigin[2] = morigin[2] + k;
-          movingImage->SetOrigin( norigin );
-
-          OverlapRegion( staticImage, movingImage, sROI, mROI );
-
-          value = 0.0;
-          IteratorType sIt( staticImage, sROI );
-          IteratorType mIt( movingImage, mROI );
-          sIt.GoToBegin();
-          mIt.GoToBegin();
-          while( !sIt.IsAtEnd() )
-          {
-            val1 = ( sIt.Get() - scaleFactor * mIt.Get() );
-            value += val1 * val1;
-            ++sIt;
-            ++mIt;
-          }
-          value /= sROI.GetNumberOfPixels();
-
-          if ( value  < bestValue )
-          {
-            bestValue = value;
-            besti = i;
-            bestj = j;
-            bestk = k;
-            std::cout << "*****" << besti<< ' ' << bestj << ' '
-                      << bestk << ' ' << bestValue << std::endl;
-          }
-        }
-      }
-    }
-    std::cout << besti<< ' ' << bestj << ' ' <<
-                 bestk << ' ' << bestValue << std::endl;
-    m_SharedData->m_TileOffset[0][ztile+1] += besti;
-    m_SharedData->m_TileOffset[1][ztile+1] += bestj;
-    m_SharedData->m_TileOffset[2][ztile+1] += bestk;
-  }
-}
-
-
-template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
-ReadOffsetFile()
-{
-  for( unsigned int id = 1; id < m_TileNumber[2]; id++  )
-  {
-    std::stringstream m_OffsetFile;
-    m_OffsetFile << m_OffsetFilePath << id << ".txt";
-    std::ifstream os ( m_OffsetFile.str().c_str() );
-
-    if ( !os )
-    {
-      return;
-    }
-
-    std::string line, value;
-    for( unsigned int i = 0; i < ImageDimension; i++ )
-    {
-      std::getline ( os, line );
-      std::stringstream valueStream( line );
-      for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
-      {
-        std::getline ( valueStream, value, ' ' );
-        m_SharedData->m_TileOffset[i][j] += atof( value.c_str() );
-      }
-    }
-    os.close();
-  }
-    
-  // Compile offsets to identify effective offsets
-  for( unsigned int i = 0; i < ImageDimension; i++ )
-  {
-    m_SharedData->m_TileEffectiveOffset[i][0] = 0.0;
-    for( unsigned int j = 1; j < m_TileNumber[2]; j++ )
-    {
-      m_SharedData->m_TileEffectiveOffset[i][j] =
-          m_SharedData->m_TileEffectiveOffset[i][j-1] +
-          m_SharedData->m_TileOffset[i][j];
-    }
-  }
-
-  // Flip effective offsets
-  double temp;
-  for( unsigned int j = 1; j < m_TileNumber[2]; j++ )
-  {
-    temp = m_SharedData->m_TileEffectiveOffset[0][j];
-    m_SharedData->m_TileEffectiveOffset[0][j] = m_SharedData->m_TileEffectiveOffset[1][j];
-    m_SharedData->m_TileEffectiveOffset[1][j] = temp;
-  }
-}
-
-
-template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
-WriteOffsetFile()
-{ 
-  for( unsigned int id = m_ZTileStart; id <= m_ZTileEnd; id++  )
-  {    
-    std::stringstream filename;
-    filename << m_OffsetFilePath << id+1 << ".txt";
-    std::ofstream os ( filename.str().c_str() );
-
-    if ( !os )
-    {
-      std::cout << "error in offset file opening" << std::endl;
-      return;
-    }
-
-    for( unsigned int i = 0; i < ImageDimension; i++ )
-    {
-      for( unsigned int j = 0; j < m_TileNumber[2]; j++ )
-      {
-        if ( j == id+1 )
-        {
-          os << m_SharedData->m_TileOffset[i][j] << ' ';
-        }
-        else
-        {
-          os << 0.0 << ' ';
-        }
-      }
-      os << std::endl;
-    }
-
-    os.close();
-  }
-}
-
-
-template < class TValueType, class TInputImage >
-void
-SettingsInfoExtractionFilter< TValueType, TInputImage >::
 ReadTileInfo( std::istream& os )
 {
-  std::string value, line;
-
-  // Do a string search to determine the locations
-  for( unsigned int i = 0; i < ImageDimension; i++ )
+  for( unsigned int i = 0; i < m_SettingFieldName.size(); i++ )
   {
-    m_NumberOfTiles *= m_SettingFieldValue[i];
-    m_TileNumber[i] = m_SettingFieldValue[i];
-    m_TileSize[i] = m_SettingFieldValue[9+i];
-    m_TileOverlap[i] = m_SettingFieldValue[6+i];
+    if ( m_SettingFieldName[i] == "# Subvolume X")
+    {
+        m_SharedData->m_TileNumber[0] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile Number[0] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "# Subvolume Y")
+    {
+        m_SharedData->m_TileNumber[1] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile Number[1] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "# Subvolume Z")
+    {
+        m_SharedData->m_TileNumber[2] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile Number[2] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Size of Z Stack X (um)")
+    {
+        m_SharedData->m_TileSize[0] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile size[0] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Size of Z Stack Y (um)")
+    {
+        m_SharedData->m_TileSize[1] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile size[1] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Size of Z Stack Z (um)")
+    {
+        m_SharedData->m_TileSize[2] = atoi( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile size[2] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Overlap X (um)")
+    {
+        m_SharedData->m_TileOverlap[0] = atof( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile overlap[0] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Overlap Y (um)")
+    {
+        m_SharedData->m_TileOverlap[1] = atof( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile overlap[1] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Overlap Z (um)")
+    {
+        m_SharedData->m_TileOverlap[2] = atof( m_SettingFieldValue[i].c_str() );
+        //std::cout << "Tile overlap[2] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "Z Motion")
+    {
+      if ( m_SettingFieldValue[i] == "Sample scan" )
+      {
+        m_SampleScan = true;
+      }
+      //std::cout << "Tile overlap[2] " << m_SettingFieldValue[i] << std::endl;
+    }
+    if ( m_SettingFieldName[i] == "PC name")
+    {
+      m_ScopeName = m_SettingFieldValue[i];
+    }
   }
 
+  for( unsigned int i = 0; i < ImageDimension; i++ )
+  {
+    m_NumberOfTiles *= m_SharedData->m_TileNumber[i];
+  }
+
+  std::string value, line;
   // Read next two lines
   StringVectorType m_TileInfoName;
   m_TileInfoName.resize( 100 );
@@ -544,8 +357,8 @@ TransformCoordinateAxes()
     for( unsigned int j = 0; j < ImageDimension; j++ )
     {
       m_TransformedTileInfoValue[i][j] = newCenter[j];
-      m_TransformedTileInfoValue[i][j+ImageDimension] = newCenter[j] - 0.5*m_TileSize[j];
-      m_TransformedTileInfoValue[i][j+2*ImageDimension] = newCenter[j] + 0.5*m_TileSize[j];
+      m_TransformedTileInfoValue[i][j+ImageDimension] = newCenter[j] - 0.5*m_SharedData->m_TileSize[j];
+      m_TransformedTileInfoValue[i][j+2*ImageDimension] = newCenter[j] + 0.5*m_SharedData->m_TileSize[j];
     }
   }
 }
@@ -567,9 +380,25 @@ UpdateFileNameLookup( std::istream& os )
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( m_TileDirectory.c_str() );
 
-  std::vector< std::string > relevantFilenameVector;
   searchStringCH << m_ChannelPrefix << m_ChannelNumber;
   searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
+
+  m_SharedData->m_TileFileNameArray.resize( m_SharedData->m_TileNumber[0] );
+  for( unsigned int i = 0; i < m_SharedData->m_TileNumber[0]; i++ )
+  {
+    m_SharedData->m_TileFileNameArray[i].resize( m_SharedData->m_TileNumber[1] );
+    for( unsigned int j = 0; j < m_SharedData->m_TileNumber[1]; j++ )
+    {
+      m_SharedData->m_TileFileNameArray[i][j].resize( m_SharedData->m_TileNumber[2] );
+      for( unsigned int k = 0; k < m_SharedData->m_TileNumber[2]; k++ )
+      {
+        m_SharedData->m_TileFileNameArray[i][j][k] = std::string();
+      }
+    }
+  }
+
+  unsigned int xp, yp, zp, pos;
+  unsigned int m_TrueCountOfTiles = 0;
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
@@ -577,61 +406,64 @@ UpdateFileNameLookup( std::istream& os )
     if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
          ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
     {
-      relevantFilenameVector.push_back( filename );
-    }
-  }
+      pos = filename.find_last_of("x");
+      xp = atoi( filename.substr( pos-3, 3 ).c_str() );
+      pos = filename.find_last_of("y");
+      yp = atoi( filename.substr( pos-3, 3 ).c_str() );
+      pos = filename.find_last_of("z");
+      zp = atoi( filename.substr( pos-3, 3 ).c_str() );
 
-  m_SharedData->m_TileFileNameArray.resize( m_SettingFieldValue[0] );
-  unsigned int m_TrueCountOfTiles = 0;
-  for( unsigned int i = 0; i < m_TileNumber[0]; i++ )
-  {
-    m_SharedData->m_TileFileNameArray[i].resize( m_TileNumber[1] );
-    for( unsigned int j = 0; j < m_TileNumber[1]; j++ )
-    {
-      m_SharedData->m_TileFileNameArray[i][j].resize( m_TileNumber[2] );
-      for( unsigned int k = 0; k < m_TileNumber[2]; k++ )
+      m_SharedData->m_TileFileNameArray[xp][yp][zp] = m_TileDirectory + filename;
+
+      // Read the associated tags of this filename
+      //TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
+      //double cen;
+      //unsigned int count = 1;
+      //TIFFGetField(image, 40000, &count, &cen);
+      //std::cout << cen << std::endl;
+
+      if ( !ChannelNameSet )
       {
-        m_SharedData->m_TileFileNameArray[i][j][k] = std::string();
-        searchStringXYZT.str( std::string() );
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << i << "x_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << j << "y_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 3 ) << k << "z_";
-        searchStringXYZT << std::setfill( '0' ) << std::setw( 4 ) << m_TimePoint << "t";
-
-        for ( unsigned int m = 0; m < relevantFilenameVector.size(); m++)
-        {
-          filename = relevantFilenameVector[m];
-
-          if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
-               ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
-          {
-            //std::cout << i << ' ' << j << ' ' << k << ' ' << filename << std::endl;
-            filename2 << m_TileDirectory << filename;
-            m_SharedData->m_TileFileNameArray[i][j][k] = filename2.str();
-
-            // Read the associated tags of this filename
-            //TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[i][j][k].c_str(), "r");
-            //double* cen = new double[3];
-            //unsigned int count = 3;
-            //TIFFGetField(image, 40000, &count, &cen);
-
-            //std::cout << cen[0] << ' ' << cen[1] << ' ' << cen[2] << std::endl;
-
-            if ( !ChannelNameSet )
-            {
-              unsigned int pos = filename.find( searchString );
-              m_ChannelName = filename.substr( pos-3, 5 );
-              ChannelNameSet = true;
-              m_SampleName = filename2.str();
-            }
-            m_TrueCountOfTiles++;
-          }
-          filename2.str( std::string() );
-        }
+        pos = filename.find( searchString );
+        m_ChannelName = filename.substr( pos-3, 5 );
+        ChannelNameSet = true;
+        m_SampleName = m_SharedData->m_TileFileNameArray[xp][yp][zp];
       }
+
+      m_TrueCountOfTiles++;
     }
   }
   m_NumberOfTiles = m_TrueCountOfTiles;
+}
+
+template < class TValueType, class TInputImage >
+std::istream&
+SettingsInfoExtractionFilter< TValueType, TInputImage >::
+safeGetline(std::istream& is, std::string& t)
+{
+    t.clear();
+
+    std::istream::sentry se(is, true);
+    std::streambuf* sb = is.rdbuf();
+
+    for(;;) {
+        int c = sb->sbumpc();
+        switch (c) {
+        case '\n':
+            return is;
+        case '\r':
+            if(sb->sgetc() == '\n')
+                sb->sbumpc();
+            return is;
+        case EOF:
+            // Also handle the case when the last line has no line ending
+            if(t.empty())
+                is.setstate(std::ios::eofbit);
+            return is;
+        default:
+            t += (char)c;
+        }
+    }
 }
 
 
@@ -680,23 +512,28 @@ Read()
   }
 
   // Read first two lines
-  std::string value, line;
-  std::getline ( os, line);
-  std::stringstream nameStream(line);
+  std::string value1, value2, line1, line2;
+  safeGetline ( os, line1 );
+  std::stringstream nameStream( line1 );
 
-  std::getline ( os, line);
-  std::stringstream valueStream( line );
+  //std::cout << "Line1: " << line1 << std::endl;
 
-  // First two lines is 29 fields of data
-  for( unsigned int i = 0; i < 29; i++ )
+  safeGetline ( os, line2);
+  std::stringstream valueStream( line2 );
+
+  //std::cout << "Line2: " << line2 << std::endl;
+
+  // First two lines is 29-34 fields of data
+  unsigned int i = 0;
+  while( std::getline ( nameStream, value1, ',' ) )
   {
-    std::getline ( nameStream, value, ',' );
-    m_SettingFieldName[i] = value;
+    m_SettingFieldName[i] = value1;
 
-    //std::cout << value << ' ';
-    std::getline ( valueStream, value, ',' );
-    m_SettingFieldValue[i] = atof( value.c_str() );
-    //std::cout << value << std::endl;
+    //std::cout << value1 << ' ';
+    std::getline ( valueStream, value2, ',' );
+    m_SettingFieldValue[i] = value2;
+    //std::cout << value2 << std::endl;
+    i++;
   }
 
   ReadTileInfo( os );
@@ -714,11 +551,10 @@ Read()
   std::cout << "Updated tile coverage" << std::endl;
 
   // Read one image to get m_TileDimensions and m_TileSpacing
-  {
-    ReaderPointer reader = ReaderType::New();
-    reader->SetFileName ( m_SampleName );
-    reader->Update();
-    ImagePointer currentImage = reader->GetOutput();
+  ReaderPointer reader = ReaderType::New();
+  reader->SetFileName ( m_SampleName );
+  reader->Update();
+  ImagePointer currentImage = reader->GetOutput();
 
 //    const DictionaryType & dictionary = reader->GetImageIO()->GetMetaDataDictionary();
 //    typename DictionaryType::ConstIterator itr = dictionary.Begin();
@@ -740,48 +576,32 @@ Read()
 //      ++itr;
 //    }
 
-    m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
-
-    m_TileSpacing[0] = m_TileSize[0]/m_TileDimension[1];
-    m_TileSpacing[1] = m_TileSize[1]/m_TileDimension[0];
-    m_TileSpacing[2] = m_TileSize[2]/m_TileDimension[2];
-    std::cout << "Read tile dimensions" << std::endl;
-  }
+  m_SharedData->m_TileDimension = currentImage->GetLargestPossibleRegion().GetSize();
 
   // Store m_TileDimension correctly since image is flipped
-  unsigned int temp = m_TileDimension[0];
-  m_TileDimension[0] = m_TileDimension[1];
-  m_TileDimension[1] = temp;
+  unsigned int temp = m_SharedData->m_TileDimension[0];
+  m_SharedData->m_TileDimension[0] = m_SharedData->m_TileDimension[1];
+  m_SharedData->m_TileDimension[1] = temp;
+
+  m_SharedData->m_TileSpacing[0] = m_SharedData->m_TileSize[0]/m_SharedData->m_TileDimension[0];
+  m_SharedData->m_TileSpacing[1] = m_SharedData->m_TileSize[1]/m_SharedData->m_TileDimension[1];
+  m_SharedData->m_TileSpacing[2] = m_SharedData->m_TileSize[2]/m_SharedData->m_TileDimension[2];
+  std::cout << "Read tile dimensions" << std::endl;
 
   // Create a stitched image
   CreateStitchedImage();
 
-  // Register files  
+  // Register files
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
-    m_SharedData->m_TileOffset[i].resize( m_TileNumber[2], 0.0 );
-    m_SharedData->m_TileEffectiveOffset[i].resize( m_TileNumber[2], 0.0 );
+    m_SharedData->m_TileOffset[i].resize( m_SharedData->m_TileNumber[2], 0.0 );
+    m_SharedData->m_TileEffectiveOffset[i].resize( m_SharedData->m_TileNumber[2], 0.0 );
   }
 
   // Read offset file
   if ( !m_OffsetFilePath.empty() )
   {
     ReadOffsetFile();
-  }
-
-  if ( m_RegisterZTiles )
-  {
-    for( unsigned int i = 0; i < m_SearchRadius.size(); i++ )
-    {
-      RegisterTiles( m_SearchRadius[i], m_StepLength[i] );
-    }
-
-    // Write out the offsets
-    std::cout << "Offset file path: " << m_OffsetFilePath << std::endl;
-    if ( !m_OffsetFilePath.empty() )
-    {
-      WriteOffsetFile();
-    }
   }
 
   os.close();
@@ -798,12 +618,12 @@ CreateStitchedImage()
     m_StitchIndex[i]     = 0;
     m_StitchSize[i]      = m_MaximumEnd[i] - m_MinimumStart[i];
     m_StitchOrigin[i]    = m_MinimumStart[i];
-    m_StitchDimension[i] = m_StitchSize[i]/m_TileSpacing[i];
+    m_StitchDimension[i] = m_StitchSize[i]/m_SharedData->m_TileSpacing[i];
   }
 
   m_StitchedImage = ImageType::New();
   m_StitchedImage->SetOrigin( m_StitchOrigin );
-  m_StitchedImage->SetSpacing( m_TileSpacing );
+  m_StitchedImage->SetSpacing( m_SharedData->m_TileSpacing );
   m_StitchedImage->SetRegions( m_StitchRegion );
 }
 

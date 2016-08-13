@@ -34,11 +34,16 @@ class StitchingSharedData : public Object
   typedef std::vector< double > DoubleVectorType;
   typedef TInputImage ImageType;
   typedef typename ImageType::Pointer ImagePointer;
-  typedef ImageFileReader< ImageType > ReaderType;
-  typedef typename ReaderType::Pointer ReaderPointer;
-
+  typedef typename ImageType::PixelType PixelType;
   typedef typename ImageType::SizeType SizeType;
   typedef typename ImageType::SpacingType SpacingType;
+  typedef typename ImageType::IndexType IndexType;
+  typedef typename ImageType::RegionType RegionType;
+  typedef typename ImageType::PointType PointType;
+  typedef typename SizeType::SizeValueType SizeValueType;
+
+  typedef ImageFileReader< ImageType > ReaderType;
+  typedef typename ReaderType::Pointer ReaderPointer;
 
   typedef Image< double, 2 > RImageType;
   typedef typename RImageType::Pointer RImagePointer;
@@ -68,6 +73,13 @@ class StitchingSharedData : public Object
   itkGetConstMacro( CorrectionVariance, double );
   itkGetConstMacro( CorrectionFilename, std::string );
 
+  itkGetConstMacro( TileDimension,      SizeType );
+  itkGetConstMacro( TileOverlap,        PointType );
+  itkGetConstMacro( TileSize,           PointType );
+  itkGetConstMacro( TileNumber,         IndexType );
+  itkGetConstMacro( TileSpacing,        SpacingType );
+
+
   void SetCorrectionInfo( std::string& iName, double& var, double& thresh )
   {
     m_CorrectionFilename = iName;
@@ -86,6 +98,12 @@ class StitchingSharedData : public Object
   std::string   m_CorrectionFilename;
   double        m_CorrectionVariance;
 
+  IndexType         m_TileNumber;
+  PointType         m_TileSize;
+  SizeType          m_TileDimension;
+  SpacingType       m_TileSpacing;
+  PointType         m_TileOverlap;
+
   ImagePointer  m_PSF;
   std::string   m_PSFPath;
   unsigned int  m_DeconvolutionIterations;
@@ -100,9 +118,6 @@ protected:
   ~StitchingSharedData(){}
   void ReadCorrectionImage();
   void PrintSelf(std::ostream& os, Indent indent) const;
-
-  SizeType          m_TileDimension;
-  SpacingType       m_TileSpacing;
 
 private:
   StitchingSharedData(const Self&) {}

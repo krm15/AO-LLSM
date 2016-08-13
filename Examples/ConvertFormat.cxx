@@ -52,6 +52,7 @@
 #include "itkPermuteAxesImageFilter.h"
 #include "itkSettingsInfoExtractionFilter.h"
 #include "itkRichardsonLucyDeconvolutionImageFilter.h"
+#include "itkStitchingSharedData.h"
 #include "anyoption.h"
 
 int main ( int argc, char* argv[] )
@@ -77,6 +78,7 @@ int main ( int argc, char* argv[] )
   typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
   typedef itk::CastImageFilter< ImageType, OutputImageType > CastFilterType;
   typedef itk::ImageFileWriter< OutputImageType >  WriterType;
+  typedef itk::StitchingSharedData< ImageType > SharedDataType;
 
   typedef ImageType::SpacingType SpacingType;
   typedef ImageType::SizeType SizeType;
@@ -162,26 +164,23 @@ int main ( int argc, char* argv[] )
     deconv = true;
   }
 
+  SharedDataType::Pointer m_SharedData = SharedDataType::New();
+
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
   settingsReader->SetTileDirectory( argv[2] );
   settingsReader->SetChannelNumber( ch );
   settingsReader->SetTimePoint( tp );
+  settingsReader->SetSharedData( m_SharedData );
   settingsReader->Read();
-
-  StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
-  DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue(  );
 
   // Setup the dimensions of the largest stitched image
   unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
-  unsigned int *tileNumber;
-  tileNumber = settingsReader->GetTileNumber();
-
-  double *tileSize;
-  tileSize = settingsReader->GetTileSize();
-
-  SizeType tilePixelDimension = settingsReader->GetTileDimension();
-  SpacingType spacing = settingsReader->GetTileSpacing();
+  IndexType tileNumber = m_SharedData->m_TileNumber;
+  PointType tileSize = m_SharedData->m_TileSize;
+  SizeType tilePixelDimension = m_SharedData->m_TileDimension;
+  SpacingType spacing = m_SharedData->m_TileSpacing;
+  PointType tileOverlap = m_SharedData->m_TileOverlap;
 
   std::cout << "Number of tiles " << numOfTiles << std::endl;
   std::cout << "Tile number" << std::endl;

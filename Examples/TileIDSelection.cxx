@@ -172,34 +172,19 @@ int main ( int argc, char* argv[] )
   settingsReader->SetSharedData( m_SharedData );
   settingsReader->Read();
 
-  StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
-  DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();
-
   // Setup the dimensions of the largest stitched image
   unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
-  unsigned int *m_TileNumber;
-  m_TileNumber = settingsReader->GetTileNumber();
-
-  double *tileSize;
-  tileSize = settingsReader->GetTileSize();
-
-  SizeType tilePixelDimension = settingsReader->GetTileDimension();
-  SpacingType spacing = settingsReader->GetTileSpacing();
-
-  m_SharedData->SetTileDimension( tilePixelDimension );
-  m_SharedData->SetTileSpacing( spacing );
+  IndexType tileNumber = m_SharedData->m_TileNumber;
+  PointType tileSize = m_SharedData->m_TileSize;
+  SizeType tilePixelDimension = m_SharedData->m_TileDimension;
+  SpacingType spacing = m_SharedData->m_TileSpacing;
+  PointType tileOverlap = m_SharedData->m_TileOverlap;
 
   std::cout << "Number of tiles " << numOfTiles << std::endl;
-  std::cout << "Tile number" << std::endl;
-  std::cout << m_TileNumber[0] << ' ' << m_TileNumber[1] << ' '
-                             << m_TileNumber[2] << std::endl;
-  std::cout << " Tile size (um)" << std::endl;
-  std::cout << tileSize[0] << ' ' << tileSize[1] << ' '
-                           << tileSize[2] << std::endl;
-  std::cout << "Tile pixel dimension" << std::endl;
-  std::cout << tilePixelDimension << std::endl;
-  std::cout << "Tile spacing" << std::endl;
-  std::cout << spacing << std::endl;
+  std::cout << "Tile number     " << tileNumber << std::endl;
+  std::cout << "Tile size (um)  " << tileSize << std::endl;
+  std::cout << "Tile dimension  " << tilePixelDimension << std::endl;
+  std::cout << "Tile spacing    " << spacing << std::endl;
 
   // beginCorner or endCorner
   IndexType beginIndex, endIndex;
@@ -240,7 +225,7 @@ int main ( int argc, char* argv[] )
   {
     //std::cout <<  beginCorner << ' ' << endCorner << std::endl;
     double scanStartVal = 100000, scanEndVal = -100000;
-    for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
+    for( unsigned int i = 0; i < tileNumber[k]; i++ )
     {
       //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
       //          << m_SharedData->m_TileCoverEnd[k][i] << std::endl;

@@ -39,13 +39,9 @@
 #include <sstream>
 #include <iomanip>
 
-#include "itkDirectory.h"
-#include "itkImageFileReader.h"
-#include "itkImageRegionIteratorWithIndex.h"
-#include "itkImageSeriesWriter.h"
-#include "itkNumericSeriesFileNames.h"
 #include "itkSettingsInfoExtractionFilter.h"
 #include "itkStitchingSharedData.h"
+#include "itkExtractStitchTransformImageFilter.h"
 #include "anyoption.h"
 #include "itkTimeProbe.h"
 
@@ -71,12 +67,9 @@ int main ( int argc, char* argv[] )
   typedef ImageType::PointType PointType;
   typedef SizeType::SizeValueType SizeValueType;
 
-  typedef itk::Image< PixelType, 2 > RImageType;
-  typedef itk::NumericSeriesFileNames NameGeneratorType;
-  typedef itk::ImageSeriesWriter< ImageType, RImageType> SeriesWriterType;
-  typedef itk::ImageFileWriter< RImageType> RWriterType;
   typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
   typedef itk::StitchingSharedData< ImageType > SharedDataType;
+  typedef itk::ExtractStitchTransformImageFilter< ImageType > ExtractTransformFilterType;
 
   // Measure time taken
   itk::TimeProbe cputimer;
@@ -102,7 +95,6 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -n   --threads 1   (default) number of threads" );
   opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
   opt->addUsage( " -o   --offset      (default) offset filename" );
-  opt->addUsage( " -r   --reg    Off  (default) register z tiles" );
   opt->addUsage( " -s   --zstart  0   (default) z tile" );
   opt->addUsage( " -e   --zend    1   (default) z tile" );
   opt->addUsage( " -l   --length  5.0 (default) search length vector" );
@@ -116,7 +108,6 @@ int main ( int argc, char* argv[] )
 
   /* a flag (takes no argument), supporting long and short form */
   opt->setFlag(  "help",  'h' );
-  opt->setFlag(  "reg",   'r' );
 
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
@@ -124,7 +115,6 @@ int main ( int argc, char* argv[] )
   opt->setOption(  "threads", 'n' );
   opt->setOption(  "exp",     'x' );
   opt->setOption(  "offset",  'o' );
-  opt->setOption(  "reg",     'r' );
   opt->setOption(  "zstart",  's' );
   opt->setOption(  "zend",    'e' );
   opt->setOption(  "length",  'l' );
@@ -178,7 +168,7 @@ int main ( int argc, char* argv[] )
   }
   if( opt->getValue( 'n' ) != NULL  || opt->getValue( "threads" ) != NULL  )
   {
-    numOfThreads = atof( opt->getValue( 'n' ) );
+    numOfThreads = atoi( opt->getValue( 'n' ) );
   }
   if( opt->getValue( 'x' ) != NULL  || opt->getValue( "exp" ) != NULL  )
   {
@@ -223,7 +213,11 @@ int main ( int argc, char* argv[] )
   {
     searchRadius.push_back( 5.0 );
   }
-  
+  if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
+  {
+    OffsetFilePath = opt->getValue( 'o' );
+  }
+
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
@@ -233,27 +227,17 @@ int main ( int argc, char* argv[] )
   settingsReader->SetChannelPrefix( searchCH );
   settingsReader->SetTimePoint( tp );
   settingsReader->SetSharedData( m_SharedData );
-
-  if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
-  {
-    OffsetFilePath = opt->getValue( 'o' );
-    settingsReader->SetOffsetFilePath( OffsetFilePath );
-  }
-
-  if( opt->getFlag( "reg" ) || opt->getFlag( 'r' ) )
-  {
-    settingsReader->SetRegisterZTiles( 1 );
-    settingsReader->SetStepLength( stepLength );
-    settingsReader->SetSearchRadius( searchRadius );
-    settingsReader->SetZTileStart( zStart );
-    settingsReader->SetZTileEnd( zEnd );
-  }
-  else
-  {
-    settingsReader->SetRegisterZTiles( 0 );
-  }
-
   settingsReader->Read();
+
+  ExtractTransformFilterType::Pointer extractTransform = ExtractTransformFilterType::New();
+  extractTransform->SetStepLength( stepLength );
+  extractTransform->SetSearchRadius( searchRadius );
+  extractTransform->SetZTileStart( zStart );
+  extractTransform->SetZTileEnd( zEnd );
+  extractTransform->SetSharedData( m_SharedData );
+  extractTransform->SetOffsetFilePath( OffsetFilePath );
+  extractTransform->SetNumberOfThreads( numOfThreads );
+  extractTransform->BeginRegister();
   
   cputimer.Stop();
   std::cout << "Registration took " << cputimer.GetMean() << " seconds" << std::endl;

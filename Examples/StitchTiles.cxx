@@ -184,8 +184,6 @@ int main ( int argc, char* argv[] )
   std::vector<double> sxy;
   bool subsample = false;
   bool mip = false;
-
-  
   
   /* 6. GET THE VALUES */
   if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
@@ -295,6 +293,15 @@ int main ( int argc, char* argv[] )
   settingsReader->SetChannelPrefix( searchCH );
   settingsReader->SetTimePoint( tp );
   settingsReader->SetSharedData( m_SharedData );
+  settingsReader->Read();
+
+  // Setup the dimensions of the largest stitched image
+  unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
+  IndexType tileNumber = m_SharedData->m_TileNumber;
+  PointType tileSize = m_SharedData->m_TileSize;
+  SizeType tilePixelDimension = m_SharedData->m_TileDimension;
+  SpacingType spacing = m_SharedData->m_TileSpacing;
+  PointType tileOverlap = m_SharedData->m_TileOverlap;
 
   if( opt->getValue( 'o' ) != NULL  || opt->getValue( "offset" ) != NULL  )
   {
@@ -305,28 +312,6 @@ int main ( int argc, char* argv[] )
   {
     mip = true;
   }
-
-  settingsReader->Read();
-
-  StringVectorType m_SettingName = settingsReader->GetSettingFieldName();
-  DoubleVectorType m_SettingValue = settingsReader->GetSettingFieldValue();
-
-  // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
-  unsigned int *tileNumber;
-  tileNumber = settingsReader->GetTileNumber();
-
-  double *tileSize;
-  tileSize = settingsReader->GetTileSize();
-
-  double *tileOverlap;
-  tileOverlap = settingsReader->GetTileOverlap();
-
-  SizeType tilePixelDimension = settingsReader->GetTileDimension();
-  SpacingType spacing = settingsReader->GetTileSpacing();
-
-  m_SharedData->SetTileDimension( tilePixelDimension );
-  m_SharedData->SetTileSpacing( spacing );
 
   if( opt->getValue( 'd' ) != NULL  || opt->getValue( "deconv" ) != NULL  )
   {
@@ -345,33 +330,18 @@ int main ( int argc, char* argv[] )
   }
 
   std::cout << "Number of tiles " << numOfTiles << std::endl;
-  std::cout << "Tile number" << std::endl;
-  std::cout << tileNumber[0] << ' ' << tileNumber[1] << ' '
-                             << tileNumber[2] << std::endl;
-  std::cout << " Tile size (um)" << std::endl;
-  std::cout << tileSize[0] << ' ' << tileSize[1] << ' '
-                           << tileSize[2] << std::endl;
-  std::cout << "Tile pixel dimension" << std::endl;
-  std::cout << tilePixelDimension << std::endl;
-  std::cout << "Tile spacing" << std::endl;
-  std::cout << spacing << std::endl;
-  std::cout << "Tile overlap" << std::endl;
-  std::cout << tileOverlap[0] << ' ' << tileOverlap[1]
-            << ' ' << tileOverlap[2] << std::endl;
-
-  //settingsReader->CreateStitchedImage();
+  std::cout << "Tile number     " << tileNumber << std::endl;
+  std::cout << "Tile size (um)  " << tileSize << std::endl;
+  std::cout << "Tile dimension  " << tilePixelDimension << std::endl;
+  std::cout << "Tile spacing    " << spacing << std::endl;
+  std::cout << "Tile overlap    " << tileOverlap << std::endl;
 
   ImageType::PointType sOrigin = settingsReader->GetStitchOrigin();
 
   std::cout << std::endl;
-  std::cout << "Stitched image origin" << std::endl;
-  std::cout << sOrigin << std::endl;
-  std::cout << "Stitched image dimensions" << std::endl;
-  std::cout << settingsReader->GetStitchDimension() << std::endl;
-  std::cout << "Stitched image size" << std::endl;
-  std::cout << settingsReader->GetStitchSize()[0] << ' ';
-  std::cout << settingsReader->GetStitchSize()[1] << ' ';
-  std::cout << settingsReader->GetStitchSize()[2] << std::endl;
+  std::cout << "Stitch origin " << sOrigin << std::endl;
+  std::cout << "Stitch dim    " << settingsReader->GetStitchDimension() << std::endl;
+  std::cout << "Stitch size   " << settingsReader->GetStitchSize() << std::endl;
 
   IndexType  roiIndex;
   roiIndex.Fill( 0 );
@@ -403,6 +373,11 @@ int main ( int argc, char* argv[] )
   PointType  roiOrigin;
   ImageType::Pointer m_StitchedImage = settingsReader->GetStitchedImage();
   m_StitchedImage->TransformIndexToPhysicalPoint( tempIndex, roiOrigin );
+
+  std::cout << std::endl;
+  std::cout << "ROI origin " <<  roiOrigin << std::endl;
+  std::cout << "ROI size   " <<  roiSize << std::endl;
+  std::cout << "ROI index  " <<  tempIndex << std::endl;
 
   ImageType::Pointer m_ROIImage = ImageType::New();
   m_ROIImage->SetOrigin( roiOrigin );
