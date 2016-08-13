@@ -40,6 +40,7 @@
 #include "itkRegionOfInterestImageFilter.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
+#include "itkCastImageFilter.h"
 #include "itkPermuteAxesImageFilter.h"
 #include "itkRichardsonLucyDeconvolutionImageFilter.h"
 #include "itkStitchingSharedData.h"
@@ -81,8 +82,13 @@ public:
   typedef ImageRegionIterator< ImageType > IteratorType;
   typedef ImageRegionIteratorWithIndex< ImageType > IndexIteratorType;
 
-  typedef ImageFileReader< ImageType > ReaderType;
-  typedef typename ReaderType::Pointer ReaderPointer;
+  typedef Image<unsigned short, ImageDimension> DoubleImageType; // double
+  typedef ImageFileReader< DoubleImageType >    ReaderType;
+  typedef typename ReaderType::Pointer          ReaderPointer;
+
+  typedef CastImageFilter< DoubleImageType, ImageType > CastFilterType;
+  typedef typename CastFilterType::Pointer CastFilterPointer;
+
   typedef PermuteAxesImageFilter< ImageType > PermuteAxesFilterType;
   typedef typename PermuteAxesFilterType::Pointer PermuteAxesFilterPointer;
 

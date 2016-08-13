@@ -183,12 +183,12 @@ BeforeThreadedGenerateData()
     double endCorner = m_ROIOrigin[k] + m_ROI.GetSize()[k] * m_TileSpacing[k];
 
     //std::cout <<  beginCorner << ' ' << endCorner << std::endl;
-    double scanStartVal = std::numeric_limits<double>::max();
-    double scanEndVal   = std::numeric_limits<double>::min();
+    double scanStartVal = 1000000000; //std::numeric_limits<double>::max();
+    double scanEndVal   = -1000000000; //std::numeric_limits<double>::min();
     for( unsigned int i = 0; i < m_TileNumber[k]; i++ )
     {
-      //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
-      //          << m_SharedData->m_TileCoverEnd[k][i] << std::endl;
+      //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCover[k][0][0][i] << ' '
+      //          << m_SharedData->m_TileCover[k][1][0][i] << std::endl;
       if ( ( beginCorner >= m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] - 0.0001 ) &&
            ( beginCorner <= m_SharedData->m_TileCover[k][1][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] + 0.0001 ) &&
            ( scanStartVal >= m_SharedData->m_TileCover[k][0][0][i] + m_SharedData->m_TileEffectiveOffset[k][m_ScanStart[2]] ) )
@@ -226,7 +226,6 @@ FillROIImageFilter< TInputImage >::
 ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
 {
   ImagePointer m_ROIImage = this->GetOutput();
-  SpacingType m_TileSpacing = m_ROIImage->GetSpacing();
   RegionType m_ROI = m_ROIImage->GetLargestPossibleRegion();
 
   // Start a loop that will read all the tiles from zScanStart to zScanEnd
@@ -251,7 +250,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-          //std::cout << filename.c_str() << std::endl;
+          std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
             //std::cout << i << ' ' << j << ' ' << k << std::endl;
@@ -345,13 +344,15 @@ typename FillROIImageFilter< TInputImage >::ImagePointer
 FillROIImageFilter< TInputImage >::
 ExtractCorrectedAndFlippedTile( std::string& filename )
 {
-  SpacingType  m_TileSpacing = m_SharedData->m_TileSpacing;
-
   ReaderPointer m_Reader = ReaderType::New();
   m_Reader->SetFileName( filename.c_str() );
   m_Reader->Update();
 
-  ImagePointer cImage = m_Reader->GetOutput();
+  CastFilterPointer caster = CastFilterType::New();
+  caster->SetInput( m_Reader->GetOutput() );
+  caster->Update();
+
+  ImagePointer cImage = caster->GetOutput();
   cImage->DisconnectPipeline();
 
   PixelType p;
@@ -402,7 +403,7 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
 
   ImagePointer currenTInputImage = ImageType::New();
   currenTInputImage->SetOrigin( pImage->GetOrigin() );
-  currenTInputImage->SetSpacing( m_TileSpacing );
+  currenTInputImage->SetSpacing(  m_SharedData->m_TileSpacing );
   currenTInputImage->SetRegions( pImage->GetLargestPossibleRegion() );
   currenTInputImage->Allocate();
   currenTInputImage->FillBuffer( 0 );
