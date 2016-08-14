@@ -329,6 +329,9 @@ int main ( int argc, char* argv[] )
     std::cout << "Read Correction map with dark level and variance of "  << thresh << ' ' << var << std::endl;
   }
 
+  std::cout << "Sample scan: " << settingsReader->GetSampleScan() << std::endl;
+  std::cout << "Scope name : " << settingsReader->GetScopeName() << std::endl;
+
   std::cout << "Number of tiles " << numOfTiles << std::endl;
   std::cout << "Tile number     " << tileNumber << std::endl;
   std::cout << "Tile size (um)  " << tileSize << std::endl;

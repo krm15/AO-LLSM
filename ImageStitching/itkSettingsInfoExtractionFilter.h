@@ -70,6 +70,7 @@
 #include "itkMetaDataDictionary.h"
 #include "itkMetaDataObject.h"
 
+#include "itkFixedArray.h"
 #include "itk_tiff.h"
 
 #include "itkImageFileWriter.h"
@@ -154,6 +155,7 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   itkGetConstMacro( StitchRegion,       RegionType );
   itkGetConstMacro( ChannelName,        std::string );
   itkGetConstMacro( ScopeName,          std::string );
+  itkGetConstMacro( SampleScan,         bool );
 
   itkSetMacro( SettingsDirectory,   std::string );
   itkSetMacro( TileDirectory,       std::string );
@@ -202,6 +204,8 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   SizeType      m_StitchDimension;
   IndexType     m_StitchIndex;
   RegionType    m_StitchRegion;
+
+  FixedArray<unsigned int, ImageDimension> tileAxesOrder;
 
   SharedDataPointer m_SharedData;
 

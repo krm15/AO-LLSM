@@ -54,6 +54,10 @@ SettingsInfoExtractionFilter< TValueType, TInputImage >
   m_OffsetFilePath = "";
   m_SharedData = ITK_NULLPTR;
   m_SampleScan = false;
+
+  tileAxesOrder[0] = 0;
+  tileAxesOrder[1] = 1;
+  tileAxesOrder[2] = 2;
 }
 
 
@@ -130,9 +134,10 @@ UpdateTileCoverage( std::istream& os )
   {
     for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
     {
-      unsigned int temp =  m_TileInfoValue[i][j];// range is m_TileNumber[j]
-      m_SharedData->m_TileCover[j][0][0][temp] = m_TransformedTileInfoValue[i][j+3];
-      m_SharedData->m_TileCover[j][1][0][temp] = m_TransformedTileInfoValue[i][j+6];
+      unsigned int jj = tileAxesOrder[j];
+      unsigned int temp =  m_TileInfoValue[i][jj];// range is m_TileNumber[j]
+      m_SharedData->m_TileCover[j][0][0][temp] = m_TransformedTileInfoValue[i][jj+3];
+      m_SharedData->m_TileCover[j][1][0][temp] = m_TransformedTileInfoValue[i][jj+6];
     }
   }
 
@@ -140,9 +145,12 @@ UpdateTileCoverage( std::istream& os )
   for( unsigned int j = 0; j < ImageDimension; j++ )
   {
     bool sign = true;
-    if ( m_SharedData->m_TileCover[j][0][0][0] > m_SharedData->m_TileCover[j][0][0][1] )
+    if ( !m_SampleScan )
     {
-      sign = false;
+      if ( m_SharedData->m_TileCover[j][0][0][0] > m_SharedData->m_TileCover[j][0][0][1] )
+      {
+        sign = false;
+      }
     }
 
     for( unsigned int k = 0; k < m_SharedData->m_TileNumber[j]; k++ )
@@ -260,7 +268,7 @@ ReadTileInfo( std::istream& os )
     }
     if ( m_SettingFieldName[i] == "Z Motion")
     {
-      if ( m_SettingFieldValue[i] == "Sample scan" )
+      if ( m_SettingFieldValue[i] == "Sample piezo" )
       {
         m_SampleScan = true;
       }
@@ -270,6 +278,21 @@ ReadTileInfo( std::istream& os )
     {
       m_ScopeName = m_SettingFieldValue[i];
     }
+  }
+
+  // Flip m_TileNumber and m_TileOverlap for sample scan
+  if ( m_SampleScan )
+  {
+    tileAxesOrder[0] = 1;
+    tileAxesOrder[1] = 0;
+
+    unsigned int temp1 = m_SharedData->m_TileNumber[0];
+    m_SharedData->m_TileNumber[0] = m_SharedData->m_TileNumber[1];
+    m_SharedData->m_TileNumber[1] = temp1;
+
+    double temp2 = m_SharedData->m_TileOverlap[0];
+    m_SharedData->m_TileOverlap[0] = m_SharedData->m_TileOverlap[1];
+    m_SharedData->m_TileOverlap[1] = temp2;
   }
 
   for( unsigned int i = 0; i < ImageDimension; i++ )
@@ -401,22 +424,37 @@ UpdateFileNameLookup( std::istream& os )
   unsigned int totalPixelCount = 0;
   unsigned int m_TrueCountOfTiles = 0;
   std::vector< unsigned int > histogram;
+  IndexType index, index2;
   histogram.resize(300000, 0);
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
+    //std::cout << "m: " << m << std::endl;
     filename = directory->GetFile( m );
 
     if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
          ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
     {
       pos = filename.find_last_of("x");
-      xp = atoi( filename.substr( pos-3, 3 ).c_str() );
+      index2[0] = atoi( filename.substr( pos-3, 3 ).c_str() );
       pos = filename.find_last_of("y");
-      yp = atoi( filename.substr( pos-3, 3 ).c_str() );
+      index2[1] = atoi( filename.substr( pos-3, 3 ).c_str() );
       pos = filename.find_last_of("z");
-      zp = atoi( filename.substr( pos-3, 3 ).c_str() );
+      index2[2] = atoi( filename.substr( pos-3, 3 ).c_str() );
 
-      m_SharedData->m_TileFileNameArray[xp][yp][zp] = m_TileDirectory + filename;
+      if ( m_SampleScan )
+      {
+        index[0] = index2[1];
+        index[1] = m_SharedData->m_TileNumber[0] - index2[0];
+        index[2] = m_SharedData->m_TileNumber[2] - index2[2] - 1;
+      }
+      else
+      {
+        index = index2;
+      }
+
+      //std::cout << index << ' ' << index2 << std::endl;
+
+      m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
 
       unsigned int lastindex = filename.find_last_of("d");
       std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "MIP_z.tif";
@@ -458,7 +496,7 @@ UpdateFileNameLookup( std::istream& os )
         pos = filename.find( searchString );
         m_ChannelName = filename.substr( pos-3, 5 );
         ChannelNameSet = true;
-        m_SampleName = m_SharedData->m_TileFileNameArray[xp][yp][zp];
+        m_SampleName = m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]];
       }
 
       m_TrueCountOfTiles++;
@@ -642,6 +680,7 @@ Read()
 
   // Create a stitched image
   CreateStitchedImage();
+  std::cout << "Estimate stitched image specification" << std::endl;
 
   // Register files
   for( unsigned int i = 0; i < ImageDimension; i++ )
