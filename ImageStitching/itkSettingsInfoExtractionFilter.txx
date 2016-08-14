@@ -121,9 +121,9 @@ UpdateTileCoverage( std::istream& os )
 {
   for( unsigned int i = 0; i < ImageDimension; i++ )
   {
-    for( unsigned int j = 0; j < 2; j++ )
+    for( unsigned int j = 0; j < 2; j++ )//start/end
     {
-      for( unsigned int k = 0; k < 2; k++ )
+      for( unsigned int k = 0; k < 2; k++ )//clipped/unclipped
       {
         m_SharedData->m_TileCover[i][j][k].resize( m_SharedData->m_TileNumber[i] );
       }
