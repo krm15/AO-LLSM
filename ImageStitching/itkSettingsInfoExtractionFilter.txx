@@ -397,9 +397,11 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
 
-  unsigned int xp, yp, zp, pos;
+  unsigned int xp, yp, zp, pos, p;
+  unsigned int totalPixelCount = 0;
   unsigned int m_TrueCountOfTiles = 0;
-  double max = 0.0;
+  std::vector< unsigned int > histogram;
+  histogram.resize(300000, 0);
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     filename = directory->GetFile( m );
@@ -416,38 +418,40 @@ UpdateFileNameLookup( std::istream& os )
 
       m_SharedData->m_TileFileNameArray[xp][yp][zp] = m_TileDirectory + filename;
 
-      unsigned int lastindex = filename.find_last_of(".");
-      std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "_MIP_z.tif";
+      unsigned int lastindex = filename.find_last_of("d");
+      std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "MIP_z.tif";
 
-      std::ifstream infile( filename_mip.c_str() );
-      if ( infile.good() )
+      std::string filename_raw = m_SettingsDirectory + filename.substr(0, lastindex-1) + ".tif";
+
+      //std::ifstream infile( filename_mip.c_str() );
+      //if ( infile )
       {
-        infile.close();
+        //infile.close();
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename_mip.c_str() );
         reader->Update();
 
         RImagePointer img = reader->GetOutput();
+        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
 
         RIteratorType It( img, img->GetLargestPossibleRegion() );
         It.GoToBegin();
         while( !It.IsAtEnd() )
         {
-          if ( max < It.Get() ) max = It.Get();
+          p = static_cast<unsigned int>(It.Get());
+          histogram[p]++;
           ++It;
         }
       }
 
       // Read the associated tags of this filename
-      TIFF* image = TIFFOpen(m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str(), "r");
-      void *cenx, *ceny, *cenz;
-      uint16 count;
+      TIFF* image = TIFFOpen(filename_raw.c_str(), "r");
+      float *cenx, *ceny, *cenz;
+      unsigned int count;
       TIFFGetField(image, 40000, &count, &cenx);
       TIFFGetField(image, 40001, &count, &ceny);
       TIFFGetField(image, 40002, &count, &cenz);
-//      std::cout << m_SharedData->m_TileFileNameArray[xp][yp][zp].c_str()
-//                << ' ' << *(float *)cenx << ' ' << *(float *)ceny << ' '
-//                << *(float *)cenz << std::endl;
+      //std::cout << filename_raw.c_str() << ' ' << *cenx << ' ' << *ceny << ' ' << *cenz << std::endl;
 
       if ( !ChannelNameSet )
       {
@@ -462,7 +466,18 @@ UpdateFileNameLookup( std::istream& os )
   }
   m_NumberOfTiles = m_TrueCountOfTiles;
 
-  if ( max > 0.01 )
+  unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
+  unsigned int max = histogram.size() - 1;
+  unsigned int cumsum = 0;
+  while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
+  {
+      cumsum += histogram[max];
+      max--;
+  }
+
+  // Do some analysis here to find a good m
+
+  if ( max > 0 )
   {
     m_SharedData->m_ScalingFactor = 65535/max;
   }

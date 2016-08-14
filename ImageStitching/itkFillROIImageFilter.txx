@@ -144,8 +144,8 @@ BeforeThreadedGenerateData()
   double beginCornerZ = m_ROIOrigin[2];
   double endCornerZ = m_ROIOrigin[2] + m_ROI.GetSize()[2] * m_TileSpacing[2];
   {
-    double scanStartVal = std::numeric_limits<double>::max();
-    double scanEndVal = std::numeric_limits<double>::min();
+      double scanStartVal = 1000000000; //std::numeric_limits<double>::max();
+      double scanEndVal   = -1000000000; //std::numeric_limits<double>::min();
     for( unsigned int i = 0; i < m_TileNumber[2]; i++ )
     {
       //std::cout << k << ' ' << i << ' ' << m_SharedData->m_TileCoverStart[k][i] << ' '
