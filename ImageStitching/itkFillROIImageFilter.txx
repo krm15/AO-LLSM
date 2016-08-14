@@ -354,7 +354,7 @@ ExtractCorrectedAndFlippedTile( std::string& filename )
   shiftFilter->SetShift( 0.0 );
   shiftFilter->Update();
 
-  ImagePointer cImage = shiftFilter->GetOutput();
+  ImagePointer cImage = m_Reader->GetOutput();
   cImage->DisconnectPipeline();
 
   PixelType p;

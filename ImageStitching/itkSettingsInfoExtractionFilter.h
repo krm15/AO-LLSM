@@ -174,7 +174,6 @@ class ITK_EXPORT SettingsInfoExtractionFilter : public Object
   void ReadOffsetFile();
   std::istream& safeGetline(std::istream& is, std::string& t);
 
-  std::string   m_Path;
   std::string   m_TileDirectory;
   std::string   m_OffsetFilePath;
   std::string   m_ChannelName;

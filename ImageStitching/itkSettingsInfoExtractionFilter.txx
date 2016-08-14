@@ -293,6 +293,10 @@ ReadTileInfo( std::istream& os )
     double temp2 = m_SharedData->m_TileOverlap[0];
     m_SharedData->m_TileOverlap[0] = m_SharedData->m_TileOverlap[1];
     m_SharedData->m_TileOverlap[1] = temp2;
+
+    temp2 = m_SharedData->m_TileSize[0];
+    m_SharedData->m_TileSize[0] = m_SharedData->m_TileSize[1];
+    m_SharedData->m_TileSize[1] = temp2;
   }
 
   for( unsigned int i = 0; i < ImageDimension; i++ )
@@ -444,7 +448,7 @@ UpdateFileNameLookup( std::istream& os )
       if ( m_SampleScan )
       {
         index[0] = index2[1];
-        index[1] = m_SharedData->m_TileNumber[0] - index2[0];
+        index[1] = m_SharedData->m_TileNumber[1] - index2[0] - 1;
         index[2] = m_SharedData->m_TileNumber[2] - index2[2] - 1;
       }
       else
@@ -456,15 +460,22 @@ UpdateFileNameLookup( std::istream& os )
 
       m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
 
-      unsigned int lastindex = filename.find_last_of("d");
-      std::string filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "MIP_z.tif";
-
-      std::string filename_raw = m_SettingsDirectory + filename.substr(0, lastindex-1) + ".tif";
-
-      //std::ifstream infile( filename_mip.c_str() );
-      //if ( infile )
+      std::string filename_mip, filename_raw;
+      if ( filename.find( "decon.tif" ) != std::string::npos )
       {
-        //infile.close();
+        unsigned int lastindex = filename.find_last_of("d");
+        filename_mip = m_TileDirectory + "MIPs/" + filename.substr(0, lastindex) + "MIP_z.tif";
+        filename_raw = m_SettingsDirectory + filename.substr(0, lastindex-1) + ".tif";
+      }
+      else
+      {
+        filename_raw = m_SettingsDirectory + filename;
+      }
+
+      std::ifstream infile( filename_mip.c_str() );
+      if ( infile )
+      {
+        infile.close();
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename_mip.c_str() );
         reader->Update();
@@ -483,12 +494,12 @@ UpdateFileNameLookup( std::istream& os )
       }
 
       // Read the associated tags of this filename
-      TIFF* image = TIFFOpen(filename_raw.c_str(), "r");
-      float *cenx, *ceny, *cenz;
-      unsigned int count;
-      TIFFGetField(image, 40000, &count, &cenx);
-      TIFFGetField(image, 40001, &count, &ceny);
-      TIFFGetField(image, 40002, &count, &cenz);
+//      TIFF* image = TIFFOpen(filename_raw.c_str(), "r");
+//      float *cenx, *ceny, *cenz;
+//      unsigned int count;
+//      TIFFGetField(image, 40000, &count, &cenx);
+//      TIFFGetField(image, 40001, &count, &ceny);
+//      TIFFGetField(image, 40002, &count, &cenz);
       //std::cout << filename_raw.c_str() << ' ' << *cenx << ' ' << *ceny << ' ' << *cenz << std::endl;
 
       if ( !ChannelNameSet )
@@ -509,20 +520,22 @@ UpdateFileNameLookup( std::istream& os )
   unsigned int cumsum = 0;
   while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
   {
-      cumsum += histogram[max];
-      max--;
+    cumsum += histogram[max];
+    max--;
   }
 
   // Do some analysis here to find a good m
-
   if ( max > 0 )
   {
+     std::cout << max << std::endl;
     m_SharedData->m_ScalingFactor = 65535/max;
   }
   else
   {
     m_SharedData->m_ScalingFactor = 1.0;
   }
+
+    std::cout << "Scaling Factor: " << m_SharedData->m_ScalingFactor << std::endl;
 }
 
 
