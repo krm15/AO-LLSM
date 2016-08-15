@@ -424,12 +424,13 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
 
-  unsigned int xp, yp, zp, pos, p;
+  unsigned int pos, p;
   unsigned int totalPixelCount = 0;
   unsigned int m_TrueCountOfTiles = 0;
+  unsigned int histogramSize = 500000;
   std::vector< unsigned int > histogram;
   IndexType index, index2;
-  histogram.resize(300000, 0);
+  histogram.resize(histogramSize, 0);
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     //std::cout << "m: " << m << std::endl;
@@ -476,9 +477,20 @@ UpdateFileNameLookup( std::istream& os )
       if ( infile )
       {
         infile.close();
+
+        std::cout << filename_mip << std::endl;
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename_mip.c_str() );
-        reader->Update();
+
+        try
+          {
+          reader->Update();
+          }
+        catch( itk::ExceptionObject & err )
+          {
+          std::cerr << "ExceptionObject caught !" << std::endl;
+          std::cerr << err << std::endl;
+          }
 
         RImagePointer img = reader->GetOutput();
         totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
@@ -488,6 +500,10 @@ UpdateFileNameLookup( std::istream& os )
         while( !It.IsAtEnd() )
         {
           p = static_cast<unsigned int>(It.Get());
+          if ( p >= histogramSize )
+          {
+            p = histogramSize-1;
+          }
           histogram[p]++;
           ++It;
         }
@@ -515,6 +531,12 @@ UpdateFileNameLookup( std::istream& os )
   }
   m_NumberOfTiles = m_TrueCountOfTiles;
 
+  if ( totalPixelCount == 0 )
+  {
+    m_SharedData->m_ScalingFactor = 1.0;
+    return;
+  }
+
   unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
   unsigned int max = histogram.size() - 1;
   unsigned int cumsum = 0;
@@ -527,7 +549,6 @@ UpdateFileNameLookup( std::istream& os )
   // Do some analysis here to find a good m
   if ( max > 0 )
   {
-     std::cout << max << std::endl;
     m_SharedData->m_ScalingFactor = 65535/max;
   }
   else
