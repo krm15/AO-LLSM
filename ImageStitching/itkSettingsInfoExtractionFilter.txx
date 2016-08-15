@@ -500,7 +500,7 @@ UpdateFileNameLookup( std::istream& os )
       {
         infile.close();
 
-        std::cout << filename_mip << std::endl;
+        //std::cout << filename_mip << std::endl;
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename_mip.c_str() );
 

@@ -58,44 +58,36 @@ int main ( int argc, char* argv[] )
   typedef ImageType::PointType PointType;
   typedef SizeType::SizeValueType SizeValueType;
 
-  std::string searchCH = "_ch";
-
   DirectoryType::Pointer directory = DirectoryType::New();
   directory->Load( argv[1] );
 
-  std::string filename;
-  std::stringstream searchString;
-  searchString << "_MIP_z.tif";
+  std::string filename, filename2;
+  std::string searchString = "_MIP_z.tif";
 
   unsigned int histogramSize = 500000;
   std::vector< unsigned int > histogram;
   unsigned int m_TrueCountOfTiles = 0;
+
   unsigned int totalPixelCount = 0;
-  PixelType p;
+
+  unsigned int p;
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     //std::cout << "m: " << m << std::endl;
     filename = directory->GetFile( m );
-    if ( filename.find( searchString.str() ) != std::string::npos )
+    if ( filename.find( searchString ) != std::string::npos )
     {
-      std::ifstream infile( filename.c_str() );
+      filename2 = argv[1] + filename;
+      std::ifstream infile( filename2.c_str() );
       if ( infile )
       {
        infile.close();
 
-       std::cout << filename << std::endl;
-       ReaderType::Pointer reader = ReaderType::New();
-       reader->SetFileName ( filename.c_str() );
+       std::cout << filename2 << std::endl;
 
-       try
-       {
-         reader->Update();
-       }
-       catch( itk::ExceptionObject & err )
-       {
-         std::cerr << "ExceptionObject caught !" << std::endl;
-         std::cerr << err << std::endl;
-       }
+       ReaderType::Pointer reader = ReaderType::New();
+       reader->SetFileName ( filename2.c_str() );
+       reader->Update();
 
        ImageType::Pointer img = reader->GetOutput();
        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
@@ -104,7 +96,7 @@ int main ( int argc, char* argv[] )
        It.GoToBegin();
        while( !It.IsAtEnd() )
        {
-         p = static_cast<unsigned int>(It.Get());
+         p = static_cast<unsigned int>( It.Get() );
          if ( p >= histogramSize )
          {
            p = histogramSize-1;
@@ -112,6 +104,7 @@ int main ( int argc, char* argv[] )
          histogram[p]++;
          ++It;
       }
+
       m_TrueCountOfTiles++;
     }
   }
