@@ -37,34 +37,19 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
-#include <iomanip>
 
 #include "itkDirectory.h"
 #include "itkImageFileReader.h"
-#include "itkImageRegionIteratorWithIndex.h"
-#include "itkImageSeriesWriter.h"
-#include "itkNumericSeriesFileNames.h"
-
-#include "itkSettingsInfoExtractionFilter.h"
-#include "itkNearestNeighborInterpolateImageFunction.h"
-#include "itkAffineTransform.h"
-#include "itkResampleImageFilter.h"
-#include <itkMaximumProjectionImageFilter.h>
-#include "itkFillROIImageFilter.h"
-#include "itkStitchingSharedData.h"
-#include "anyoption.h"
+#include "itkImageRegionIterator.h"
 
 int main ( int argc, char* argv[] )
 {
-  const unsigned int Dimension = 3;
-  typedef std::vector< std::string > StringVectorType;
-  typedef std::vector< double > DoubleVectorType;
-  typedef vnl_matrix< double > vnlMatrixType;
-  typedef vnl_vector< double > vnlVectorType;
-
-  typedef unsigned short PixelType;
+  const unsigned int Dimension = 2;
+  typedef double PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
   typedef itk::ImageFileReader< ImageType > ReaderType;
+  typedef itk::Directory DirectoryType;
+  typedef itk::ImageRegionIterator< ImageType > IteratorType;
 
   typedef ImageType::SpacingType SpacingType;
   typedef ImageType::SizeType SizeType;
@@ -73,119 +58,10 @@ int main ( int argc, char* argv[] )
   typedef ImageType::PointType PointType;
   typedef SizeType::SizeValueType SizeValueType;
 
-  typedef itk::SettingsInfoExtractionFilter< double, ImageType > SettingsFilterType;
-  typedef itk::StitchingSharedData< ImageType > SharedDataType;
-
-  /* 1. CREATE AN OBJECT */
-  AnyOption *opt = new AnyOption();
-
-  /* 2. SET PREFERENCES  */
-  //opt->noPOSIX(); /* do not check for POSIX style character options */
-  //opt->setVerbose(); /* print warnings about unknown options */
-  //opt->autoUsagePrint(true); /* print usage for bad options */
-
-  /* 3. SET THE USAGE/HELP   */
-  opt->addUsage( "" );
-  opt->addUsage( "Usage: " );
-  opt->addUsage( "" );
-  opt->addUsage( " iSettings file directory " );
-  opt->addUsage( " iTile directories " );
-  opt->addUsage( " oScaleFactorFile " );
-  opt->addUsage( " -h   --help    Prints this help " );
-  opt->addUsage( " -c   --channel 0   (default) channel value" );
-  opt->addUsage( " -t   --time    0   (default) timepoint" );
-  opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
-  opt->addUsage( " -x   --exp     _ch (default) string marking channel information" );
-  opt->addUsage( "" );
-
-  /* 4. SET THE OPTION STRINGS/CHARACTERS */
-
-  /* by default all  options will be checked on the command line
-    and from option/resource file */
-
-  /* a flag (takes no argument), supporting long and short form */
-  opt->setFlag(  "help",  'h' );
-  opt->setFlag(  "Physical",  'p' );
-  
-  /* an option (takes an argument), supporting long and short form */
-  opt->setOption(  "channel", 'c' );
-  opt->setOption(  "time",    't' );
-  opt->setOption(  "exp",     'x' );
-
-  /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
-  /* read options from a  option/resource file with ':'
-  separated options or flags, one per line */
-
-  opt->processFile( ".options" );
-  opt->processCommandArgs( argc, argv );
-
-  if( ! opt->hasOptions())
-  {
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
-
-  unsigned int ch = 0;
-  unsigned int tp = 0;
   std::string searchCH = "_ch";
 
-  /* 6. GET THE VALUES */
-  if( opt->getFlag( "help" ) || opt->getFlag( 'h' ) )
-  {
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
-
-  if( opt->getArgc() < 3 )
-  {
-    std::cerr << "Insufficient # of arguments " << opt->getArgc() << std::endl;
-    opt->printUsage();
-    delete opt;
-    return EXIT_FAILURE;
-  }
-
-  if( opt->getValue( 'c' ) != NULL  || opt->getValue( "channel" ) != NULL  )
-  {
-    ch = atoi( opt->getValue( 'c' ) );
-  }
-  if( opt->getValue( 't' ) != NULL  || opt->getValue( "time" ) != NULL  )
-  {
-    tp = atoi( opt->getValue( 't' ) );
-  }
-  if( opt->getValue( 'x' ) != NULL  || opt->getValue( "exp" ) != NULL  )
-  {
-    searchCH = opt->getValue( 'x' );
-  }
-
-  SharedDataType::Pointer m_SharedData = SharedDataType::New();
-
-  SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
-  settingsReader->SetSettingsDirectory( argv[1] );
-  settingsReader->SetTileDirectory( argv[2] );
-  settingsReader->SetChannelNumber( ch );
-  settingsReader->SetChannelPrefix( searchCH );
-  settingsReader->SetTimePoint( tp );
-  settingsReader->SetSharedData( m_SharedData );
-  settingsReader->Read();
-
-  // Setup the dimensions of the largest stitched image
-  unsigned int numOfTiles = settingsReader->GetNumberOfTiles();
-  IndexType tileNumber = m_SharedData->m_TileNumber;
-  PointType tileSize = m_SharedData->m_TileSize;
-  SizeType tilePixelDimension = m_SharedData->m_TileDimension;
-  SpacingType spacing = m_SharedData->m_TileSpacing;
-  PointType tileOverlap = m_SharedData->m_TileOverlap;
-
-  std::cout << "Number of tiles " << numOfTiles << std::endl;
-  std::cout << "Tile number     " << tileNumber << std::endl;
-  std::cout << "Tile size (um)  " << tileSize << std::endl;
-  std::cout << "Tile dimension  " << tilePixelDimension << std::endl;
-  std::cout << "Tile spacing    " << spacing << std::endl;
-
-  DirectoryPointer directory = DirectoryType::New();
-  directory->Load( argv[2] );
+  DirectoryType::Pointer directory = DirectoryType::New();
+  directory->Load( argv[1] );
 
   std::string filename;
   std::stringstream searchString;
@@ -194,6 +70,8 @@ int main ( int argc, char* argv[] )
   unsigned int histogramSize = 500000;
   std::vector< unsigned int > histogram;
   unsigned int m_TrueCountOfTiles = 0;
+  unsigned int totalPixelCount = 0;
+  PixelType p;
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     //std::cout << "m: " << m << std::endl;
@@ -205,8 +83,8 @@ int main ( int argc, char* argv[] )
       {
        infile.close();
 
-       std::cout << filename_mip << std::endl;
-       ReaderPointer reader = ReaderType::New();
+       std::cout << filename << std::endl;
+       ReaderType::Pointer reader = ReaderType::New();
        reader->SetFileName ( filename.c_str() );
 
        try
@@ -219,7 +97,7 @@ int main ( int argc, char* argv[] )
          std::cerr << err << std::endl;
        }
 
-       ImagePointer img = reader->GetOutput();
+       ImageType::Pointer img = reader->GetOutput();
        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
 
        IteratorType It( img, img->GetLargestPossibleRegion() );
@@ -253,7 +131,7 @@ int main ( int argc, char* argv[] )
 
     if ( max > 0 )
     {
-     outputFile << double(65535)/( (double)max ) << std::endl;
+     rescaleFactor = double(65535)/( (double)max );
     }
   }
   std::cout << "Scaling Factor: " << rescaleFactor << std::endl;
@@ -261,5 +139,6 @@ int main ( int argc, char* argv[] )
   std::ofstream outputFile( argv[2] );
   outputFile << rescaleFactor << std::endl;
   outputFile.close();
+
   return EXIT_SUCCESS;
 }
