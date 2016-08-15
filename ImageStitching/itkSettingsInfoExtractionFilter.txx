@@ -130,16 +130,20 @@ UpdateTileCoverage( std::istream& os )
     }
   }
 
-  for( unsigned int j = 0; j < ImageDimension; j++ )
-  {
-    for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
-    {
-      unsigned int jj = tileAxesOrder[j];
-      unsigned int temp =  m_TileInfoValue[i][jj];// range is m_TileNumber[j]
-      m_SharedData->m_TileCover[j][0][0][temp] = m_TransformedTileInfoValue[i][jj+3];
-      m_SharedData->m_TileCover[j][1][0][temp] = m_TransformedTileInfoValue[i][jj+6];
-    }
-  }
+  // NOTE: CSV entries are not accurate
+//  for( unsigned int j = 0; j < ImageDimension; j++ )
+//  {
+//    for( unsigned int i = 0; i < m_NumberOfTiles; i++ )
+//    {
+//      unsigned int jj = tileAxesOrder[j];
+//      unsigned int temp =  m_TileInfoValue[i][jj];// range is m_TileNumber[j]
+//      if ( temp < m_SharedData->m_TileNumber[jj] )
+//      {
+//        m_SharedData->m_TileCover[j][0][0][temp] = m_TransformedTileInfoValue[i][jj+3];
+//        m_SharedData->m_TileCover[j][1][0][temp] = m_TransformedTileInfoValue[i][jj+6];
+//      }
+//    }
+//  }
 
   // HACK
   for( unsigned int j = 0; j < ImageDimension; j++ )
@@ -147,7 +151,8 @@ UpdateTileCoverage( std::istream& os )
     bool sign = true;
     if ( !m_SampleScan )
     {
-      if ( m_SharedData->m_TileCover[j][0][0][0] > m_SharedData->m_TileCover[j][0][0][1] )
+      //if ( m_SharedData->m_TileCover[j][0][0][0] > m_SharedData->m_TileCover[j][0][0][1] )
+        if ( j == 1)
       {
         sign = false;
       }
@@ -424,6 +429,8 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
 
+  //std::cout << "Sample scan: " << m_SampleScan << std::endl;
+
   unsigned int pos, p;
   unsigned int totalPixelCount = 0;
   unsigned int m_TrueCountOfTiles = 0;
@@ -439,12 +446,15 @@ UpdateFileNameLookup( std::istream& os )
     if ( ( filename.find( searchStringCH.str() ) != std::string::npos ) &&
          ( filename.find( searchStringXYZT.str() ) != std::string::npos ) )
     {
+      //std::cout << filename << std::endl;
       pos = filename.find_last_of("x");
       index2[0] = atoi( filename.substr( pos-3, 3 ).c_str() );
       pos = filename.find_last_of("y");
       index2[1] = atoi( filename.substr( pos-3, 3 ).c_str() );
       pos = filename.find_last_of("z");
       index2[2] = atoi( filename.substr( pos-3, 3 ).c_str() );
+
+      //std::cout << "Sample scan: " << m_SampleScan << std::endl;
 
       if ( m_SampleScan )
       {
@@ -456,10 +466,22 @@ UpdateFileNameLookup( std::istream& os )
       {
         index = index2;
       }
-
       //std::cout << index << ' ' << index2 << std::endl;
 
-      m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
+      bool validIndex = true;
+      for( unsigned int i = 0; i < ImageDimension; i++ )
+      {
+        validIndex = validIndex && ( index[i] < m_SharedData->m_TileNumber[i] - 1);
+      }
+
+      if ( validIndex )
+      {
+        m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
+      }
+      else
+      {
+        std::cout << "Index overflow" << std::endl;
+      }
 
       std::string filename_mip, filename_raw;
       if ( filename.find( "decon.tif" ) != std::string::npos )
@@ -549,14 +571,14 @@ UpdateFileNameLookup( std::istream& os )
   // Do some analysis here to find a good m
   if ( max > 0 )
   {
-    m_SharedData->m_ScalingFactor = 65535/max;
+    m_SharedData->m_ScalingFactor = double(65535)/( (double)max );
   }
   else
   {
     m_SharedData->m_ScalingFactor = 1.0;
   }
 
-    std::cout << "Scaling Factor: " << m_SharedData->m_ScalingFactor << std::endl;
+  std::cout << "Scaling Factor: " << m_SharedData->m_ScalingFactor << std::endl;
 }
 
 
@@ -667,7 +689,8 @@ Read()
   UpdateFileNameLookup( os );
   std::cout << "Updated file name lookup" << std::endl;
 
-  TransformCoordinateAxes();
+  // NOTE: CSV entries are not accurate
+  //TransformCoordinateAxes();
   std::cout << "Transformed coordinate axes" << std::endl;
 
   // Create a vector of tile origins along each axis for given timepoint

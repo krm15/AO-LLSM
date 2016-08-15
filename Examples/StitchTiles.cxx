@@ -127,6 +127,7 @@ int main ( int argc, char* argv[] )
   opt->addUsage( " -d   --deconv  ~/  (default) deconvolve tiles based on PSF" );
   opt->addUsage( " -p   --sample  1,1 (default) subsampling rate" );
   opt->addUsage( " -o   --offset  ~/  (default) offset filename" );
+  opt->addUsage( " -w   --rescale 1.0 (default) rescale factor" );
   opt->addUsage( "" ); 
 
   /* 4. SET THE OPTION STRINGS/CHARACTERS */
@@ -142,17 +143,18 @@ int main ( int argc, char* argv[] )
   /* an option (takes an argument), supporting long and short form */
   opt->setOption(  "channel", 'c' );
   opt->setOption(  "time",    't' );
-  opt->setOption(  "start",  's' );
-  opt->setOption(  "end",    'e' );
+  opt->setOption(  "start",   's' );
+  opt->setOption(  "end",     'e' );
   opt->setOption(  "lsMap",   'l' );
   opt->setOption(  "thresh",  'i' );
   opt->setOption(  "var",     'v' );
   opt->setOption(  "threads", 'n' );
   opt->setOption(  "exp",     'x' );
   opt->setOption(  "deconv",  'd' );
-  opt->setOption(  "sample",     'p' );
+  opt->setOption(  "sample",  'p' );
   opt->setOption(  "offset",  'o' );
-    
+  opt->setOption(  "rescale", 'w' );
+
   /* 5. PROCESS THE COMMANDLINE AND RESOURCE FILE */
   /* read options from a  option/resource file with ':'
   separated options or flags, one per line */
@@ -180,6 +182,7 @@ int main ( int argc, char* argv[] )
   double thresh = 104.0;
   double var = 100.0;
   unsigned int numOfThreads = 1;
+  double rescaleFactor = 1.0;
 
   std::vector<double> sxy;
   bool subsample = false;
@@ -285,6 +288,12 @@ int main ( int argc, char* argv[] )
   }
 
   SharedDataType::Pointer m_SharedData = SharedDataType::New();
+
+  if( opt->getValue( 'w' ) != NULL  || opt->getValue( "rescale" ) != NULL  )
+  {
+    rescaleFactor = atof( opt->getValue( 'w' ) );
+    m_SharedData->m_ScalingFactor = rescaleFactor;
+  }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
