@@ -291,7 +291,7 @@ ReadTileInfo( std::istream& os )
     tileAxesOrder[0] = 1;
     tileAxesOrder[1] = 0;
 
-    //if ( m_ScopeName != "" )
+    if ( m_ScopeName != "AOLS" )
     {
       unsigned int temp1 = m_SharedData->m_TileNumber[0];
       m_SharedData->m_TileNumber[0] = m_SharedData->m_TileNumber[1];
@@ -460,7 +460,14 @@ UpdateFileNameLookup( std::istream& os )
       if ( m_SampleScan )
       {
         index[0] = index2[1];
-        index[1] = m_SharedData->m_TileNumber[1] - index2[0] - 1;
+        if ( m_ScopeName == "AOLS" )
+        {
+          index[1] = m_SharedData->m_TileNumber[0] - index2[0] - 1;
+        }
+        else
+        {
+          index[1] = m_SharedData->m_TileNumber[1] - index2[0] - 1;
+        }
         index[2] = m_SharedData->m_TileNumber[2] - index2[2] - 1;
       }
       else
