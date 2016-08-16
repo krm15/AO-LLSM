@@ -429,7 +429,7 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
 
-  //std::cout << "Sample scan: " << m_SampleScan << std::endl;
+  std::cout << "Sample scan: " << m_SampleScan << std::endl;
 
   unsigned int pos, p;
   unsigned int totalPixelCount = 0;
@@ -454,8 +454,6 @@ UpdateFileNameLookup( std::istream& os )
       pos = filename.find_last_of("z");
       index2[2] = atoi( filename.substr( pos-3, 3 ).c_str() );
 
-      //std::cout << "Sample scan: " << m_SampleScan << std::endl;
-
       if ( m_SampleScan )
       {
         index[0] = index2[1];
@@ -466,20 +464,22 @@ UpdateFileNameLookup( std::istream& os )
       {
         index = index2;
       }
-      //std::cout << index << ' ' << index2 << std::endl;
 
       bool validIndex = true;
       for( unsigned int i = 0; i < ImageDimension; i++ )
       {
-        validIndex = validIndex && ( index[i] < m_SharedData->m_TileNumber[i] - 1);
+        validIndex = validIndex && ( index[i] <= m_SharedData->m_TileNumber[i] - 1);
       }
 
       if ( validIndex )
       {
+        //std::cout << index << ' ' << index2 << std::endl;
+        //std::cout << "Index valid" << std::endl;
         m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
       }
       else
       {
+        std::cout << index << ' ' << index2 << std::endl;
         std::cout << "Index overflow" << std::endl;
       }
 
@@ -493,42 +493,6 @@ UpdateFileNameLookup( std::istream& os )
       else
       {
         filename_raw = m_SettingsDirectory + filename;
-      }
-
-      std::ifstream infile( filename_mip.c_str() );
-      if ( infile )
-      {
-        infile.close();
-
-        //std::cout << filename_mip << std::endl;
-        RReaderPointer reader = RReaderType::New();
-        reader->SetFileName ( filename_mip.c_str() );
-
-        try
-          {
-          reader->Update();
-          }
-        catch( itk::ExceptionObject & err )
-          {
-          std::cerr << "ExceptionObject caught !" << std::endl;
-          std::cerr << err << std::endl;
-          }
-
-        RImagePointer img = reader->GetOutput();
-        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
-
-        RIteratorType It( img, img->GetLargestPossibleRegion() );
-        It.GoToBegin();
-        while( !It.IsAtEnd() )
-        {
-          p = static_cast<unsigned int>(It.Get());
-          if ( p >= histogramSize )
-          {
-            p = histogramSize-1;
-          }
-          histogram[p]++;
-          ++It;
-        }
       }
 
       // Read the associated tags of this filename
@@ -552,33 +516,6 @@ UpdateFileNameLookup( std::istream& os )
     }
   }
   m_NumberOfTiles = m_TrueCountOfTiles;
-
-  if ( totalPixelCount == 0 )
-  {
-    m_SharedData->m_ScalingFactor = 1.0;
-    return;
-  }
-
-  unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
-  unsigned int max = histogram.size() - 1;
-  unsigned int cumsum = 0;
-  while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
-  {
-    cumsum += histogram[max];
-    max--;
-  }
-
-  // Do some analysis here to find a good m
-  if ( max > 0 )
-  {
-    m_SharedData->m_ScalingFactor = double(65535)/( (double)max );
-  }
-  else
-  {
-    m_SharedData->m_ScalingFactor = 1.0;
-  }
-
-  std::cout << "Scaling Factor: " << m_SharedData->m_ScalingFactor << std::endl;
 }
 
 

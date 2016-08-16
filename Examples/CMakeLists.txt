@@ -16,6 +16,9 @@ TARGET_LINK_LIBRARIES( stitchTiles ${ITK_LIBRARIES} Option )
 ADD_EXECUTABLE( tileRescaleFactor TileRescaleFactor.cxx)
 TARGET_LINK_LIBRARIES( tileRescaleFactor ${ITK_LIBRARIES} )
 
+ADD_EXECUTABLE( tileFolderChecker TileFolderChecker.cxx)
+TARGET_LINK_LIBRARIES( tileFolderChecker ${ITK_LIBRARIES} )
+
 ADD_EXECUTABLE( tileIDSelection TileIDSelection.cxx )
 TARGET_LINK_LIBRARIES( tileIDSelection ${ITK_LIBRARIES} Option )
 

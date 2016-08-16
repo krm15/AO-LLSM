@@ -66,14 +66,16 @@ int main ( int argc, char* argv[] )
 
   unsigned int histogramSize = 500000;
   std::vector< unsigned int > histogram;
+  histogram.resize( histogramSize, 0 );
   unsigned int m_TrueCountOfTiles = 0;
 
   unsigned int totalPixelCount = 0;
+  unsigned int numOfFiles = directory->GetNumberOfFiles();
 
   unsigned int p;
-  for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
+  for ( unsigned int m = 0; m < numOfFiles; m++)
   {
-    //std::cout << "m: " << m << std::endl;
+    std::cout << "m: " << m << std::endl;
     filename = directory->GetFile( m );
     if ( filename.find( searchString ) != std::string::npos )
     {
@@ -81,34 +83,32 @@ int main ( int argc, char* argv[] )
       std::ifstream infile( filename2.c_str() );
       if ( infile )
       {
-       infile.close();
+        infile.close();
+        std::cout << filename2 << std::endl;
 
-       std::cout << filename2 << std::endl;
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName ( filename2.c_str() );
+        reader->Update();
 
-       ReaderType::Pointer reader = ReaderType::New();
-       reader->SetFileName ( filename2.c_str() );
-       reader->Update();
+        ImageType::Pointer img = reader->GetOutput();
+        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
 
-       ImageType::Pointer img = reader->GetOutput();
-       totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
-
-       IteratorType It( img, img->GetLargestPossibleRegion() );
-       It.GoToBegin();
-       while( !It.IsAtEnd() )
-       {
-         p = static_cast<unsigned int>( It.Get() );
-         if ( p >= histogramSize )
-         {
-           p = histogramSize-1;
-         }
-         histogram[p]++;
-         ++It;
+        IteratorType It( img, img->GetLargestPossibleRegion() );
+        It.GoToBegin();
+        while( !It.IsAtEnd() )
+        {
+          p = static_cast<unsigned int>( It.Get() );
+          if ( p >= histogramSize )
+          {
+            p = histogramSize-1;
+          }
+          histogram[p]++;
+          ++It;
+        }
+        m_TrueCountOfTiles++;
       }
-
-      m_TrueCountOfTiles++;
     }
   }
-}
 
   double rescaleFactor = 1.0;
   if ( totalPixelCount > 0 )

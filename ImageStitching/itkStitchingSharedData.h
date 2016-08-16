@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstring>
+#include "itkDirectory.h"
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkDiscreteGaussianImageFilter.h"
@@ -65,6 +66,9 @@ class StitchingSharedData : public Object
   typedef RescaleIntensityImageFilter< RImageType, RImageType > RescaleFilterType;
   typedef typename RescaleFilterType::Pointer RescaleFilterPointer;
 
+  typedef Directory DirectoryType;
+  typedef typename DirectoryType::Pointer DirectoryPointer;
+
   itkSetMacro( DeconvolutionIterations,  unsigned int );
   itkSetMacro( TileDimension,            SizeType );
   itkSetMacro( TileSpacing,              SpacingType );
@@ -91,6 +95,7 @@ class StitchingSharedData : public Object
   }
 
   void ReadPSFImage();
+  void ComputeScalingFactor( std::string& iDirName );
 
   StringArray3DType m_TileFileNameArray;
 

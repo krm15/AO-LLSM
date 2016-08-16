@@ -59,6 +59,83 @@ StitchingSharedData< TInputImage >
 template < class TInputImage >
 void
 StitchingSharedData< TInputImage >::
+ComputeScalingFactor( std::string& iDirName )
+{
+  DirectoryPointer directory = DirectoryType::New();
+  directory->Load( iDirName.c_str() );
+
+  std::string filename, filename2;
+  std::string searchString = "_MIP_z.tif";
+
+  unsigned int histogramSize = 500000;
+  std::vector< unsigned int > histogram;
+  histogram.resize( histogramSize, 0 );
+  unsigned int m_TrueCountOfTiles = 0;
+
+  unsigned int totalPixelCount = 0;
+  unsigned int numOfFiles = directory->GetNumberOfFiles();
+
+  unsigned int p;
+  for ( unsigned int m = 0; m < numOfFiles; m++)
+  {
+    //std::cout << "m: " << m << std::endl;
+    filename = directory->GetFile( m );
+    if ( filename.find( searchString ) != std::string::npos )
+    {
+      filename2 = iDirName + filename;
+      std::ifstream infile( filename2.c_str() );
+      if ( infile )
+      {
+        infile.close();
+        //std::cout << filename2 << std::endl;
+
+        RReaderPointer reader = RReaderType::New();
+        reader->SetFileName ( filename2.c_str() );
+        reader->Update();
+
+        RImagePointer img = reader->GetOutput();
+        totalPixelCount += img->GetLargestPossibleRegion().GetNumberOfPixels();
+
+        RIteratorType It( img, img->GetLargestPossibleRegion() );
+        It.GoToBegin();
+        while( !It.IsAtEnd() )
+        {
+          p = static_cast<unsigned int>( It.Get() );
+          if ( p >= histogramSize )
+          {
+            p = histogramSize-1;
+          }
+          histogram[p]++;
+          ++It;
+        }
+        m_TrueCountOfTiles++;
+      }
+    }
+  }
+
+  if ( totalPixelCount > 0 )
+  {
+    unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
+    unsigned int max = histogramSize - 1;
+    unsigned int cumsum = 0;
+    while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
+    {
+      cumsum += histogram[max];
+      max--;
+    }
+
+    if ( max > 0 )
+    {
+     m_ScalingFactor = double(65535)/( (double)max );
+    }
+  }
+  std::cout << "Scaling Factor: " << m_ScalingFactor << std::endl;
+}
+
+
+template < class TInputImage >
+void
+StitchingSharedData< TInputImage >::
 ReadPSFImage()
 {
   if ( m_PSFPath.empty() )

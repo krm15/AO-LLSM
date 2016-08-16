@@ -294,6 +294,12 @@ int main ( int argc, char* argv[] )
     rescaleFactor = atof( opt->getValue( 'w' ) );
     m_SharedData->m_ScalingFactor = rescaleFactor;
   }
+  else
+  {
+    std::string mipFolder = argv[2];
+    mipFolder += "MIPs/";
+    m_SharedData->ComputeScalingFactor( mipFolder );
+  }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
   settingsReader->SetSettingsDirectory( argv[1] );
