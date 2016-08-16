@@ -101,10 +101,10 @@ ComputeScalingFactor( std::string& iDirName )
         It.GoToBegin();
         while( !It.IsAtEnd() )
         {
-          if ( It.Get() > _max )
-          {
-            _max =  It.Get();
-          }
+//          if ( It.Get() > _max )
+//          {
+//            _max =  It.Get();
+//          }
 
           p = static_cast<unsigned int>( It.Get() );
           if ( p >= histogramSize )
@@ -119,22 +119,22 @@ ComputeScalingFactor( std::string& iDirName )
     }
   }
 
-  std::cout << "Max: " << _max << std::endl;
+  //std::cout << "Max pixel intensity: " << _max << std::endl;
 
   if ( totalPixelCount > 0 )
   {
-    unsigned int topPercentOfPixels = 1;//0.03 * totalPixelCount;
-    unsigned int max = histogramSize - 1;
+    unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
+    unsigned int maxIndex = histogramSize - 1;
     unsigned int cumsum = 0;
-    while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
+    while( ( maxIndex > 0 ) && ( cumsum < topPercentOfPixels ) )
     {
       cumsum += histogram[max];
-      max--;
+      maxIndex--;
     }
 
     if ( max > 0 )
     {
-     m_ScalingFactor = double(65535)/( (double)max );
+     m_ScalingFactor = double(65535)/( (double)maxIndex );
     }
   }
   std::cout << "Scaling Factor: " << m_ScalingFactor << std::endl;
