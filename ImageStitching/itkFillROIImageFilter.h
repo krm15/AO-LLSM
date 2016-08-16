@@ -82,7 +82,7 @@ public:
   typedef ImageRegionIterator< ImageType > IteratorType;
   typedef ImageRegionIteratorWithIndex< ImageType > IndexIteratorType;
 
-  typedef Image<unsigned short, ImageDimension> DoubleImageType; // double
+  typedef Image<double, ImageDimension> DoubleImageType;
   typedef ImageFileReader< DoubleImageType >    ReaderType;
   typedef typename ReaderType::Pointer          ReaderPointer;
 

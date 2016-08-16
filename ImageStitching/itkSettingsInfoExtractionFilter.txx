@@ -291,9 +291,12 @@ ReadTileInfo( std::istream& os )
     tileAxesOrder[0] = 1;
     tileAxesOrder[1] = 0;
 
-    unsigned int temp1 = m_SharedData->m_TileNumber[0];
-    m_SharedData->m_TileNumber[0] = m_SharedData->m_TileNumber[1];
-    m_SharedData->m_TileNumber[1] = temp1;
+    //if ( m_ScopeName != "" )
+    {
+      unsigned int temp1 = m_SharedData->m_TileNumber[0];
+      m_SharedData->m_TileNumber[0] = m_SharedData->m_TileNumber[1];
+      m_SharedData->m_TileNumber[1] = temp1;
+    }
 
     double temp2 = m_SharedData->m_TileOverlap[0];
     m_SharedData->m_TileOverlap[0] = m_SharedData->m_TileOverlap[1];

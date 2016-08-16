@@ -67,7 +67,7 @@ ComputeScalingFactor( std::string& iDirName )
   std::string filename, filename2;
   std::string searchString = "_MIP_z.tif";
 
-  unsigned int histogramSize = 500000;
+  unsigned int histogramSize = 150000000;
   std::vector< unsigned int > histogram;
   histogram.resize( histogramSize, 0 );
   unsigned int m_TrueCountOfTiles = 0;
@@ -76,6 +76,7 @@ ComputeScalingFactor( std::string& iDirName )
   unsigned int numOfFiles = directory->GetNumberOfFiles();
 
   unsigned int p;
+  double _max = 0.0;
   for ( unsigned int m = 0; m < numOfFiles; m++)
   {
     //std::cout << "m: " << m << std::endl;
@@ -100,6 +101,11 @@ ComputeScalingFactor( std::string& iDirName )
         It.GoToBegin();
         while( !It.IsAtEnd() )
         {
+          if ( It.Get() > _max )
+          {
+            _max =  It.Get();
+          }
+
           p = static_cast<unsigned int>( It.Get() );
           if ( p >= histogramSize )
           {
@@ -113,9 +119,11 @@ ComputeScalingFactor( std::string& iDirName )
     }
   }
 
+  std::cout << "Max: " << _max << std::endl;
+
   if ( totalPixelCount > 0 )
   {
-    unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
+    unsigned int topPercentOfPixels = 1;//0.03 * totalPixelCount;
     unsigned int max = histogramSize - 1;
     unsigned int cumsum = 0;
     while( ( max > 0 ) && ( cumsum < topPercentOfPixels ) )
