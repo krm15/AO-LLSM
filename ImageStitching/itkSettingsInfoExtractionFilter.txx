@@ -291,7 +291,7 @@ ReadTileInfo( std::istream& os )
     tileAxesOrder[0] = 1;
     tileAxesOrder[1] = 0;
 
-    if ( m_ScopeName != "AOLS" )
+    //if ( m_ScopeName != "AOLS" )
     {
       unsigned int temp1 = m_SharedData->m_TileNumber[0];
       m_SharedData->m_TileNumber[0] = m_SharedData->m_TileNumber[1];
@@ -438,13 +438,10 @@ UpdateFileNameLookup( std::istream& os )
 
   std::cout << "Sample scan: " << m_SampleScan << std::endl;
 
-  unsigned int pos, p;
-  unsigned int totalPixelCount = 0;
+  unsigned int pos;
   unsigned int m_TrueCountOfTiles = 0;
-  unsigned int histogramSize = 500000;
-  std::vector< unsigned int > histogram;
   IndexType index, index2;
-  histogram.resize(histogramSize, 0);
+
   for ( unsigned int m = 0; m < directory->GetNumberOfFiles(); m++)
   {
     //std::cout << "m: " << m << std::endl;
@@ -463,13 +460,14 @@ UpdateFileNameLookup( std::istream& os )
 
       if ( m_SampleScan )
       {
-        index[0] = index2[1];
         if ( m_ScopeName == "AOLS" )
         {
-          index[1] = m_SharedData->m_TileNumber[0] - index2[0] - 1;
+          index[0] = m_SharedData->m_TileNumber[0] - index2[1] - 1;
+          index[1] = m_SharedData->m_TileNumber[1] - index2[0] - 1;
         }
         else
         {
+          index[0] = index2[1];
           index[1] = m_SharedData->m_TileNumber[1] - index2[0] - 1;
         }
         index[2] = m_SharedData->m_TileNumber[2] - index2[2] - 1;
@@ -487,14 +485,12 @@ UpdateFileNameLookup( std::istream& os )
 
       if ( validIndex )
       {
-        //std::cout << index << ' ' << index2 << std::endl;
-        //std::cout << "Index valid" << std::endl;
+        //std::cout << "Index valid " << index << ' ' << index2 << std::endl;
         m_SharedData->m_TileFileNameArray[index[0]][index[1]][index[2]] = m_TileDirectory + filename;
       }
       else
       {
-        std::cout << index << ' ' << index2 << std::endl;
-        std::cout << "Index overflow" << std::endl;
+        std::cout << "Index overflow " << index << ' ' << index2 << std::endl;
       }
 
       std::string filename_mip, filename_raw;
