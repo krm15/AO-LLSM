@@ -395,6 +395,10 @@ TransformCoordinateAxes()
       m_TransformedTileInfoValue[i][j+ImageDimension] = newCenter[j] - 0.5*m_SharedData->m_TileSize[j];
       m_TransformedTileInfoValue[i][j+2*ImageDimension] = newCenter[j] + 0.5*m_SharedData->m_TileSize[j];
     }
+    //std::cout << m_TileInfoValue[i][0] << ' ' << m_TileInfoValue[i][1] <<
+    //             ' ' << m_TileInfoValue[i][2] << ' ';
+    //std::cout << m_TransformedTileInfoValue[i][3] << ' ' << m_TransformedTileInfoValue[i][4] <<
+    //             ' ' << m_TransformedTileInfoValue[i][5] << std::endl;
   }
 }
 

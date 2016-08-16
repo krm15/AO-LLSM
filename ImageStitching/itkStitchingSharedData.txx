@@ -128,11 +128,11 @@ ComputeScalingFactor( std::string& iDirName )
     unsigned int cumsum = 0;
     while( ( maxIndex > 0 ) && ( cumsum < topPercentOfPixels ) )
     {
-      cumsum += histogram[max];
+      cumsum += histogram[maxIndex];
       maxIndex--;
     }
 
-    if ( max > 0 )
+    if ( maxIndex > 0 )
     {
      m_ScalingFactor = double(65535)/( (double)maxIndex );
     }
