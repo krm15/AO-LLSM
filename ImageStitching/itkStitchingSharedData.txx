@@ -59,13 +59,13 @@ StitchingSharedData< TInputImage >
 template < class TInputImage >
 void
 StitchingSharedData< TInputImage >::
-ComputeScalingFactor( std::string& iDirName )
+ComputeScalingFactor( std::string& iDirName, std::string& iSearchStringCH )
 {
   DirectoryPointer directory = DirectoryType::New();
   directory->Load( iDirName.c_str() );
 
   std::string filename, filename2;
-  std::string searchString = "_MIP_z.tif";
+  std::string searchString   = "_MIP_z.tif";
 
   unsigned int histogramSize = 150000000;
   std::vector< unsigned int > histogram;
@@ -81,14 +81,15 @@ ComputeScalingFactor( std::string& iDirName )
   {
     //std::cout << "m: " << m << std::endl;
     filename = directory->GetFile( m );
-    if ( filename.find( searchString ) != std::string::npos )
+    if ( ( filename.find( searchString ) != std::string::npos ) &&
+         ( filename.find( iSearchStringCH ) != std::string::npos ) )
     {
       filename2 = iDirName + filename;
       std::ifstream infile( filename2.c_str() );
       if ( infile )
       {
         infile.close();
-        //std::cout << filename2 << std::endl;
+        std::cout << filename2 << std::endl;
 
         RReaderPointer reader = RReaderType::New();
         reader->SetFileName ( filename2.c_str() );
@@ -123,7 +124,7 @@ ComputeScalingFactor( std::string& iDirName )
 
   if ( totalPixelCount > 0 )
   {
-    unsigned int topPercentOfPixels = 0.03 * totalPixelCount;
+    unsigned int topPercentOfPixels = 0.0001 * totalPixelCount;
     unsigned int maxIndex = histogramSize - 1;
     unsigned int cumsum = 0;
     while( ( maxIndex > 0 ) && ( cumsum < topPercentOfPixels ) )

@@ -297,8 +297,9 @@ int main ( int argc, char* argv[] )
   else
   {
     std::string mipFolder = argv[2];
+    std::string searchStringCH = searchCH + opt->getValue( 'c' ) + "_";
     mipFolder += "MIPs/";
-    m_SharedData->ComputeScalingFactor( mipFolder );
+    m_SharedData->ComputeScalingFactor( mipFolder, searchStringCH );
   }
 
   SettingsFilterType::Pointer settingsReader = SettingsFilterType::New();
@@ -514,7 +515,7 @@ int main ( int argc, char* argv[] )
       SeriesWriterType::Pointer series_writer = SeriesWriterType::New();
       series_writer->SetInput( outputImage2 );
       series_writer->SetFileNames( nameGeneratorOutput->GetFileNames() );
-      series_writer->SetUseCompression( 1 );
+      series_writer->SetUseCompression( 0 );
       series_writer->Update();
     }
   }

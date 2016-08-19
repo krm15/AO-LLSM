@@ -250,7 +250,7 @@ ThreadedGenerateData(const RegionType &windowRegion, ThreadIdType threadId)
         {
           //std::cout << counter << ' ' << counter%(m_NumOfValidThreads) << std::endl;
           std::string filename = m_SharedData->m_TileFileNameArray[i][j][k];
-          std::cout << filename.c_str() << std::endl;
+          //std::cout << filename.c_str() << std::endl;
           if  ( ! filename.empty() )
           {
             //std::cout << i << ' ' << j << ' ' << k << std::endl;

@@ -95,7 +95,7 @@ class StitchingSharedData : public Object
   }
 
   void ReadPSFImage();
-  void ComputeScalingFactor( std::string& iDirName );
+  void ComputeScalingFactor( std::string& iDirName, std::string& iSearchStringCH );
 
   StringArray3DType m_TileFileNameArray;
 
