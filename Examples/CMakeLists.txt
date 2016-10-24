@@ -27,3 +27,6 @@ TARGET_LINK_LIBRARIES( tileRegistration ${ITK_LIBRARIES} Option )
 
 ADD_EXECUTABLE( convertFormat ConvertFormat.cxx)
 TARGET_LINK_LIBRARIES( convertFormat ${ITK_LIBRARIES} Option )
+
+ADD_EXECUTABLE( renameFiles RenameFiles.cxx)
+TARGET_LINK_LIBRARIES( renameFiles ${ITK_LIBRARIES} )
