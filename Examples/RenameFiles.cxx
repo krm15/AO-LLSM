@@ -55,7 +55,7 @@ int main ( int argc, char* argv[] )
   if ( argc < 2 )
   {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " iImageDir <rescaleFactor>";
+    std::cerr << argv[0] << " iImageDir <rescaleFactors> <channelID>";
     std::cerr << "" << std::endl;
     return EXIT_FAILURE;
   }
@@ -82,11 +82,17 @@ int main ( int argc, char* argv[] )
   std::vector< unsigned int > histogram;
   unsigned int p;
   double m_ScalingFactor = 1.0;
+  unsigned int channelOfInterest = 0;
 
   if ( argc > 2 )
   {
+    channelOfInterest = atoi( argv[2] );
+  }
+
+  if ( argc > 3 )
+  {
     m_RescaleImage = false;
-    m_ScalingFactor = atof( argv[2] );
+    m_ScalingFactor = atof( argv[3] );
   }
 
   DirectoryType::Pointer directory = DirectoryType::New();
@@ -106,69 +112,6 @@ int main ( int argc, char* argv[] )
          ( filename.find( searchString4 ) != std::string::npos ) )
     {
       std::cout << filename << std::endl;
-      std::string inputImageName = m_TileDirectory + filename;
-      ReaderType::Pointer reader = ReaderType::New();
-      reader->SetFileName ( inputImageName.c_str() );
-      reader->Update();
-      InputImageType::Pointer inputImg = reader->GetOutput();
-
-      if ( m_RescaleImage )
-      {
-        // Rescale the file
-        histogram.resize( histogramSize, 0 );
-        IteratorType It( inputImg, inputImg->GetLargestPossibleRegion() );
-        It.GoToBegin();
-        while( !It.IsAtEnd() )
-        {
-          p = static_cast<unsigned int>( It.Get() );
-          if ( p >= histogramSize )
-          {
-            p = histogramSize-1;
-          }
-          histogram[p]++;
-          ++It;
-        }
-
-        unsigned int totalPixelCount = inputImg->GetLargestPossibleRegion().GetNumberOfPixels();
-        unsigned int topPercentOfPixels = percentileLimit * totalPixelCount;
-        unsigned int maxIndex = histogramSize - 1;
-        unsigned int cumsum = 0;
-        while( ( maxIndex > 0 ) && ( cumsum < topPercentOfPixels ) )
-        {
-          cumsum += histogram[maxIndex];
-          maxIndex--;
-        }
-
-        if ( maxIndex > 0 )
-        {
-          m_ScalingFactor = double(discreteLimit)/( (double)maxIndex );
-        }
-        std::cout << "Scaling Factor: " << m_ScalingFactor << std::endl;
-
-
-      }
-
-      if ( m_ScalingFactor < 0.999 )
-      {
-        IteratorType It( inputImg, inputImg->GetLargestPossibleRegion() );
-        It.GoToBegin();
-        while( !It.IsAtEnd() )
-        {
-          p = It.Get()*m_ScalingFactor;
-          if ( p > discreteLimit )
-          {
-            p = discreteLimit;
-          }
-
-          It.Set( p );
-          ++It;
-        }
-      }
-
-      // Cast it to a different pixel type
-      CastFilterType::Pointer caster = CastFilterType::New();
-      caster->SetInput( inputImg );
-      caster->Update();
 
       unsigned int lastindex1 = 0; //filename.find_last_of( "." );
       unsigned int lastindex2 = filename.find_last_of( "." );
@@ -195,16 +138,82 @@ int main ( int argc, char* argv[] )
       std::string tp = rawname.substr( pos-4, 4 );
       //std::cout << "Time: " << tp << std::endl;
 
-      std::string oFilename = m_TileDirectory + m_ChannelName
-              + "_" + stack + "stack_" + channel + "ch_" + tp + "t.mha";
-      std::cout << "Output filename: " << oFilename << std::endl;
 
-      // Write out the file
-      WriterType::Pointer writer = WriterType::New();
-      writer->SetFileName( oFilename.c_str() );
-      writer->SetInput( caster->GetOutput() );
-      writer->UseCompressionOn();
-      writer->Update();
+      if ( channelOfInterest == atoi( channel.c_str() ) )
+      {
+        std::string inputImageName = m_TileDirectory + filename;
+        ReaderType::Pointer reader = ReaderType::New();
+        reader->SetFileName ( inputImageName.c_str() );
+        reader->Update();
+        InputImageType::Pointer inputImg = reader->GetOutput();
+
+        if ( m_RescaleImage )
+        {
+          // Rescale the file
+          histogram.resize( histogramSize, 0 );
+          IteratorType It( inputImg, inputImg->GetLargestPossibleRegion() );
+          It.GoToBegin();
+          while( !It.IsAtEnd() )
+          {
+            p = static_cast<unsigned int>( It.Get() );
+            if ( p >= histogramSize )
+            {
+              p = histogramSize-1;
+            }
+            histogram[p]++;
+            ++It;
+          }
+
+          unsigned int totalPixelCount = inputImg->GetLargestPossibleRegion().GetNumberOfPixels();
+          unsigned int topPercentOfPixels = percentileLimit * totalPixelCount;
+          unsigned int maxIndex = histogramSize - 1;
+          unsigned int cumsum = 0;
+          while( ( maxIndex > 0 ) && ( cumsum < topPercentOfPixels ) )
+          {
+            cumsum += histogram[maxIndex];
+            maxIndex--;
+          }
+
+          if ( maxIndex > 0 )
+          {
+            m_ScalingFactor = double(discreteLimit)/( (double)maxIndex );
+          }
+          std::cout << "Scaling Factor: " << m_ScalingFactor << std::endl;
+        }
+
+        if ( m_ScalingFactor < 0.999 )
+        {
+          IteratorType It( inputImg, inputImg->GetLargestPossibleRegion() );
+          It.GoToBegin();
+          while( !It.IsAtEnd() )
+          {
+            p = It.Get()*m_ScalingFactor;
+            if ( p > discreteLimit )
+            {
+              p = discreteLimit;
+            }
+
+            It.Set( p );
+            ++It;
+          }
+        }
+
+        // Cast it to a different pixel type
+        CastFilterType::Pointer caster = CastFilterType::New();
+        caster->SetInput( inputImg );
+        caster->Update();
+
+        std::string oFilename = m_TileDirectory + m_ChannelName
+                + "_" + stack + "stack_" + channel + "ch_" + tp + "t.mha";
+        std::cout << "Output filename: " << oFilename << std::endl;
+
+        // Write out the file
+        WriterType::Pointer writer = WriterType::New();
+        writer->SetFileName( oFilename.c_str() );
+        writer->SetInput( caster->GetOutput() );
+        writer->UseCompressionOn();
+        writer->Update();
+      }
     }
   }
 
